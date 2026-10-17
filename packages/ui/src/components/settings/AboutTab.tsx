@@ -50,7 +50,7 @@ export function AboutTab() {
               onClick={() => openLink('https://github.com/anuragrajpandey/NEXAFI')}
               style={{ maxWidth: '140px' }}
             >
-              EliteStocks
+              NEXAFI TV
             </button>
             <button
               className="sync-btn"
