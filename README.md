@@ -5,12 +5,12 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org)
 [![License](https://img.shields.io/badge/License-AGPL%20v3-green.svg)](./LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue)](./README.md)
-![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/tbeezy/ynotv/total)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/anuragrajpandey/NEXAFI/total)
 [![Chat Server](https://img.shields.io/badge/chat-discord-7289da.svg)](https://discord.gg/e5eGa5QETB)
 
 NEXAFI TV is a feature-rich IPTV player for Windows built on [Tauri v2](https://tauri.app) and [mpv](https://mpv.io). 
 
-[Documentation](https://tbeezy.github.io/ynotvdoc)
+[Documentation](https://github.com/anuragrajpandey/NEXAFI)
 
 [![Watch the video](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png)](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png)
 
@@ -98,8 +98,8 @@ NEXAFI TV is a feature-rich IPTV player for Windows built on [Tauri v2](https://
 **1. Clone the repository**
 
 ```bash
-git clone https://github.com/tbeezy/ynotv.git
-cd ynotv
+git clone https://github.com/anuragrajpandey/NEXAFI.git
+cd NEXAFI
 ```
 
 **2. Install dependencies**
@@ -265,13 +265,13 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 
 Built with the help of AI.
 
-ynoTV is a media player only. It does not provide, host, distribute, or facilitate access to any streaming services, broadcast content, channel lists, or IPTV subscriptions of any kind.
+NEXAFI TV is a media player only. It does not provide, host, distribute, or facilitate access to any streaming services, broadcast content, channel lists, or IPTV subscriptions of any kind.
 
 All content, streams, and playlists are sourced, configured, and managed solely by the end user. The developers have no knowledge of, control over, or responsibility for any third-party content accessed through the application.
 
 Users are solely responsible for ensuring that any content they access complies with the laws and regulations applicable in their jurisdiction. The developers do not condone or support the use of this application to access unlicensed or unauthorized content.
 
-Metadata displayed within the application is sourced from publicly available third-party databases including TVMaze and TMDB. ynoTV does not claim ownership of this metadata.
+Metadata displayed within the application is sourced from publicly available third-party databases including TVMaze and TMDB. NEXAFI TV does not claim ownership of this metadata.
 
 ---
 
