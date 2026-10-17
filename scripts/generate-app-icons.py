@@ -19,8 +19,13 @@ if not MASTER.is_file():
 with Image.open(MASTER) as opened:
     master = opened.convert("RGBA")
 
+# App icons must be square. Preserve the complete artwork by centering it on a
+# transparent square canvas instead of cropping or stretching it.
 if master.width != master.height:
-    raise SystemExit(f"Master icon must be square, got {master.width}x{master.height}")
+    side = max(master.width, master.height)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.alpha_composite(master, ((side - master.width) // 2, (side - master.height) // 2))
+    master = square
 
 def target_size(path: Path):
     name = path.stem
