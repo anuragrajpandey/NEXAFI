@@ -251,9 +251,9 @@ All shortcuts are fully customizable in Settings > Shortcuts.
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=tbeezy%2Fynotv&type=date&legend=top-left">
+<a href="https://www.star-history.com/?repos=anuragrajpandey%2FNEXAFI&type=date&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&theme=dark&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=anuragrajpandey/NEXAFI&type=date&theme=dark&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
    <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
  </picture>
@@ -277,7 +277,7 @@ Metadata displayed within the application is sourced from publicly available thi
 
 ## Credits
 
-ynoTV builds on the following open source projects and services:
+NEXAFI TV builds on the following open source projects and services:
 
 
 - [sbtlTV](https://github.com/thesubtleties/sbtlTV) — original foundation
