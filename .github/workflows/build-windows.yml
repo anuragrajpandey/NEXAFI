@@ -27,6 +27,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Regenerate NEXAFI TV app icons
+        shell: bash
+        run: |
+          python -m pip install --disable-pip-version-check pillow
+          python scripts/generate-app-icons.py
+
       - name: Prepare UI build for CI packaging
         shell: bash
         run: |
