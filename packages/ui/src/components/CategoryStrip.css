@@ -1,0 +1,1370 @@
+.category-strip {
+  position: fixed;
+  left: 0;
+  /* Full bleed to left edge */
+  top: var(--page-top, 32px);
+  /* Below title bar */
+  bottom: 0;
+  width: var(--category-strip-content-width, 240px);
+  /* Just content width when no sidebar */
+  padding-left: 0;
+  /* No sidebar space by default */
+  padding-top: var(--page-pad-top, 0);
+  box-sizing: border-box;
+  background: var(--strip-bg, rgba(0, 0, 0, 0.85));
+  backdrop-filter: var(--strip-filter, blur(20px));
+  -webkit-backdrop-filter: var(--strip-filter, blur(20px));
+  border: var(--glass-surface-border, none);
+  border-right: var(--strip-border-right, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: var(--glass-surface-radius, 0);
+  box-shadow: var(--glass-surface-shadow, none);
+  display: flex;
+  flex-direction: column;
+  z-index: 90;
+  /* Below sidebar (100), above guide (80) */
+
+  /* Smooth slide animation */
+  transform: translateX(-100%);
+  opacity: 0;
+  /* Removed transform/width/padding transitions for instant snapping */
+  transition: var(--strip-transition, opacity 0.15s ease);
+}
+
+/* Two-section layout: fixed top + scrollable bottom */
+.category-strip-top {
+  flex-shrink: 0;
+  padding: 0;
+  /* No scrolling - stays fixed at top */
+}
+
+.category-strip-scrollable {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 0 8px 0;
+  
+  /* iOS-style smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Scrollbar styling */
+.category-strip-scrollable::-webkit-scrollbar {
+  width: var(--app-scrollbar-width, var(--guide-scroll-strip-width, 4px));
+}
+
+.category-strip-scrollable::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.category-strip-scrollable::-webkit-scrollbar-thumb {
+  background: var(--guide-scroll-strip-thumb-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, transparent));
+  border-radius: 2px;
+}
+
+.category-strip:hover .category-strip-scrollable::-webkit-scrollbar-thumb,
+.category-strip-scrollable:hover::-webkit-scrollbar-thumb,
+.category-strip-scrollable::-webkit-scrollbar-thumb:hover {
+  background: var(--guide-scroll-strip-thumb-hover-bg, var(--scrollbar-hover-color, var(--accent-primary, #00d4ff)));
+}
+
+/* Hide old list class */
+.category-strip-list {
+  display: none;
+}
+
+.category-strip.visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.category-strip.hidden {
+  transform: translateX(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.category-strip-header {
+  padding: 16px 12px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.category-strip-title {
+  font-size: var(--cat-title-font-size, 0.75rem);
+  font-weight: var(--cat-title-font-weight, 600);
+  text-transform: uppercase;
+  letter-spacing: var(--cat-title-letter-spacing, 0.05em);
+  color: var(--cat-title-color, rgba(255, 255, 255, 0.5));
+  display: var(--cat-title-display, block);
+  align-items: var(--cat-title-align, normal);
+  gap: var(--cat-title-gap, normal);
+}
+
+/* Add Group Button - Base styles (v2 chrome via --cat-add-* tokens) */
+.add-group-btn {
+  background: var(--cat-add-bg, none);
+  border: var(--cat-add-border, none);
+  color: var(--cat-add-color, var(--text-secondary, rgba(255, 255, 255, 0.5)));
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0 4px;
+  line-height: 1;
+  transition: var(--cat-add-transition, all 0.2s ease);
+  width: var(--cat-add-size, auto);
+  height: var(--cat-add-size, auto);
+  border-radius: var(--cat-add-radius, 0);
+  display: var(--cat-add-display, inline-block);
+  align-items: var(--cat-add-align, normal);
+  justify-content: var(--cat-add-justify, normal);
+}
+
+.add-group-btn:hover {
+  color: var(--accent-primary, #00d4ff);
+  transform: scale(1.1) rotate(90deg);
+  box-shadow: var(--cat-add-hover-shadow, none);
+}
+
+/* Category Strip Actions Container */
+.category-strip-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Hide Sidebar Button */
+.hide-sidebar-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.hide-sidebar-btn:hover {
+  color: var(--text-primary, #fff);
+  background: var(--bg-hover, rgba(255, 255, 255, 0.1));
+}
+
+/* Sidebar Hint Indicator - subtle line when hovering left edge outside middle zone */
+.sidebar-hint-indicator {
+  animation: pulse-hint 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-hint {
+  0%, 100% {
+    opacity: 0.4;
+    box-shadow: 0 0 4px var(--accent-primary, rgba(0, 212, 255, 0.3));
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 8px var(--accent-primary, rgba(0, 212, 255, 0.6));
+  }
+}
+
+/* Show Sidebar Button - Floating button when sidebar is hidden */
+.show-sidebar-btn {
+  position: fixed;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) translateX(-100%);
+  background: var(--surface-color, rgba(26, 26, 26, 0.9));
+  border: 1px solid var(--border-color, rgba(42, 42, 42, 0.8));
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  padding: 16px 4px;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  z-index: 110;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              opacity 0.2s ease,
+              background 0.2s ease,
+              color 0.2s ease,
+              border-color 0.2s ease,
+              padding-left 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Visible state - pops out when hovering middle-left */
+.show-sidebar-btn.visible {
+  transform: translateY(-50%) translateX(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.show-sidebar-btn.visible:hover {
+  background: var(--surface-hover, rgba(42, 42, 42, 0.95));
+  color: var(--text-primary, #fff);
+  padding-left: 8px;
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  transform: translateY(-50%) translateX(0) scale(1.05);
+}
+
+/* Auto-hide mode: full-length vertical handle on the left edge. Always visible
+   while the sidebar is hidden so users can find it; hovering it pops the
+   sidebar open OVER the guide (higher z-index, no content reflow). */
+.category-strip-autohide-handle {
+  position: fixed;
+  left: 0;
+  top: var(--page-top, 32px);
+  bottom: 0;
+  width: 5px;
+  z-index: 95;
+  cursor: pointer;
+  background: linear-gradient(90deg, rgba(128, 128, 128, 0.35), transparent);
+  border-right: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
+  transition: width 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.category-strip-autohide-handle:hover {
+  width: 9px;
+  background: linear-gradient(90deg, var(--accent-primary, rgba(0, 212, 255, 0.45)), transparent);
+  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.35);
+}
+
+/* Search Input Styles */
+.category-search-container {
+  padding: 2px 0 0 0;
+  border-bottom: none;
+}
+
+.category-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: var(--cat-search-margin, 0 12px 2px);
+  width: var(--cat-search-width, calc(100% - 24px));
+  padding: var(--cat-search-padding, 6px 10px);
+  box-sizing: var(--cat-search-box-sizing, border-box);
+  background: var(--cat-search-bg, rgba(255, 255, 255, 0.05));
+  border: var(--cat-search-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: var(--cat-search-radius, 6px);
+  box-shadow: var(--cat-search-shadow, none);
+  transition: var(--cat-search-transition, all 0.2s ease);
+}
+
+.category-search-input-wrapper:hover {
+  background: var(--cat-search-hover-bg, var(--cat-search-bg, rgba(255, 255, 255, 0.08)));
+  border-color: var(--cat-search-hover-border-color, rgba(255, 255, 255, 0.15));
+  transform: var(--cat-search-hover-transform, none);
+  box-shadow: var(--cat-search-hover-shadow, var(--cat-search-shadow, none));
+}
+
+.category-search-input-wrapper.focused {
+  background: var(--cat-search-focused-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, rgba(255, 255, 255, 0.1)));
+  border-color: var(--cat-search-focused-border-color, color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent));
+  box-shadow: var(--cat-search-focused-shadow, 0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent));
+  transform: var(--cat-search-focused-transform, none);
+}
+
+.search-icon {
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.category-search-input-wrapper.focused .search-icon {
+  color: color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, transparent);
+}
+
+.category-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  font-size: 0.9rem;
+  font-family: inherit;
+  padding: 0;
+}
+
+.category-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.search-clear-btn {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 9px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.search-clear-btn:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.category-strip-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+
+  /* iOS-style smooth scrolling */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  overscroll-behavior: contain;
+}
+
+/* Hide scrollbar but keep functionality */
+.category-strip-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.category-strip-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.category-strip-list::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, transparent);
+  border-radius: 2px;
+}
+
+.category-strip-list::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, #00d4ff));
+}
+
+.category-item {
+  width: var(--cat-item-width, 100%);
+  box-sizing: var(--cat-item-box-sizing, content-box);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--cat-item-padding, 10px 12px);
+  margin: var(--cat-item-margin, 0);
+  border-radius: var(--cat-item-radius, 0);
+  border: var(--cat-item-border, none);
+  background: var(--cat-item-bg, transparent);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  text-align: left;
+  position: var(--cat-item-pos, static);
+  overflow: var(--cat-item-overflow, visible);
+  transition: var(--cat-item-transition, background 0.15s ease, color 0.15s ease);
+}
+
+.category-item::before {
+  content: var(--cat-item-bar-content, '');
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--cat-item-bar-width, 2px);
+  height: var(--cat-item-bar-height, 0);
+  background: var(--cat-item-bar-bg, var(--accent-primary, #00d4ff));
+  border-radius: var(--cat-item-bar-radius, 0 2px 2px 0);
+  transition: var(--cat-item-bar-transition, height 0.3s cubic-bezier(0.16, 1, 0.3, 1));
+  box-shadow: var(--cat-item-bar-shadow, none);
+  pointer-events: none;
+}
+
+.category-item:hover {
+  background: var(--cat-item-hover-bg, rgba(255, 255, 255, 0.08));
+  border-color: var(--cat-item-hover-border-color, transparent);
+  transform: var(--cat-item-hover-transform, none);
+  box-shadow: var(--cat-item-hover-shadow, none);
+  color: white;
+}
+
+.category-item:hover::before {
+  height: var(--cat-item-bar-hover-height, 0);
+}
+
+.category-item.selected::before {
+  height: var(--cat-item-bar-selected-height, 0);
+  box-shadow: var(--cat-item-bar-selected-shadow, var(--cat-item-bar-shadow, none));
+}
+
+.category-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.category-icon {
+  display: var(--cat-icn-display, inline-flex);
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--cat-icn-radius, 5px);
+  border: var(--cat-icn-border, none);
+  background: var(--cat-icn-bg, rgba(255, 255, 255, 0.04));
+  color: var(--cat-icn-color, rgba(255, 255, 255, 0.5));
+  transition: var(--cat-icn-transition, all 0.2s ease);
+  flex-shrink: 0;
+}
+
+.category-icon svg {
+  width: var(--cat-icn-svg-size, auto);
+  height: var(--cat-icn-svg-size, auto);
+}
+
+/* Strip category icon accents (v2 per-accent colors via --cat-icn-* tokens;
+   v3 inherits; light sheet redefines the light values). Placed before the VOD
+   active-icon rules so same-specificity ties resolve exactly as before. */
+.category-icon.all-channels-icon {
+  background: var(--cat-icn-all-bg, rgba(255, 255, 255, 0.04));
+  color: var(--cat-icn-all-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-all-border, transparent);
+}
+
+.category-list-bar:hover .all-channels-icon,
+.category-list-bar.selected .all-channels-icon {
+  background: var(--cat-icn-all-hover-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: var(--cat-icn-all-hover-shadow, none);
+  color: var(--cat-icn-all-hover-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-all-hover-border, transparent);
+}
+
+.category-icon.favorites-icon {
+  background: var(--cat-icn-fav-bg, rgba(255, 255, 255, 0.04));
+  color: var(--cat-icn-fav-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-fav-border, transparent);
+}
+
+.category-list-bar:hover .favorites-icon,
+.category-list-bar.selected .favorites-icon {
+  background: var(--cat-icn-fav-hover-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: var(--cat-icn-fav-hover-shadow, none);
+  color: var(--cat-icn-fav-hover-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-fav-hover-border, transparent);
+}
+
+.category-icon.watchlist-icon {
+  background: var(--cat-icn-watch-bg, rgba(255, 255, 255, 0.04));
+  color: var(--cat-icn-watch-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-watch-border, transparent);
+}
+
+.category-list-bar:hover .watchlist-icon,
+.category-list-bar.selected .watchlist-icon {
+  background: var(--cat-icn-watch-hover-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: var(--cat-icn-watch-hover-shadow, none);
+  color: var(--cat-icn-watch-hover-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-watch-hover-border, transparent);
+}
+
+.category-icon.recent-icon {
+  background: var(--cat-icn-recent-bg, rgba(255, 255, 255, 0.04));
+  color: var(--cat-icn-recent-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-recent-border, transparent);
+}
+
+.category-list-bar:hover .recent-icon,
+.category-list-bar.selected .recent-icon {
+  background: var(--cat-icn-recent-hover-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: var(--cat-icn-recent-hover-shadow, none);
+  color: var(--cat-icn-recent-hover-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-recent-hover-border, transparent);
+}
+
+.category-icon.custom-group-icon {
+  background: var(--cat-icn-custom-bg, rgba(255, 255, 255, 0.04));
+  color: var(--cat-icn-custom-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-custom-border, transparent);
+}
+
+.category-list-bar:hover .custom-group-icon,
+.category-list-bar.selected .custom-group-icon {
+  background: var(--cat-icn-custom-hover-bg, rgba(255, 255, 255, 0.04));
+  box-shadow: var(--cat-icn-custom-hover-shadow, none);
+  color: var(--cat-icn-custom-hover-color, rgba(255, 255, 255, 0.5));
+  border-color: var(--cat-icn-custom-hover-border, transparent);
+}
+
+/* VOD sidebar active-item icon glows (v2 per-icon accents via --vs-icon-* tokens;
+   v3 inherits; light sheet redefines with light values) */
+.vertical-sidebar__item.active .all-channels-icon {
+  background: var(--vs-icon-glow-bg, rgba(0, 212, 255, 0.16));
+  box-shadow: var(--vs-icon-glow-shadow, 0 0 10px rgba(0, 212, 255, 0.4));
+  color: var(--vs-icon-glow-color, #33e0ff);
+  border-color: var(--vs-icon-glow-border, rgba(0, 212, 255, 0.3));
+}
+
+.vertical-sidebar__item.active .favorites-icon {
+  background: var(--vs-icon-fav-bg, rgba(255, 196, 0, 0.16));
+  box-shadow: var(--vs-icon-fav-shadow, 0 0 10px rgba(255, 196, 0, 0.4));
+  color: var(--vs-icon-fav-color, #ffd033);
+  border-color: var(--vs-icon-fav-border, rgba(255, 196, 0, 0.3));
+}
+
+.vertical-sidebar__item.active .watchlist-icon {
+  background: var(--vs-icon-watch-bg, rgba(99, 102, 241, 0.16));
+  box-shadow: var(--vs-icon-watch-shadow, 0 0 10px rgba(99, 102, 241, 0.4));
+  color: var(--vs-icon-watch-color, #818cf8);
+  border-color: var(--vs-icon-watch-border, rgba(99, 102, 241, 0.3));
+}
+
+.vertical-sidebar__item.active .recent-icon {
+  background: var(--vs-icon-recent-bg, rgba(244, 63, 94, 0.16));
+  box-shadow: var(--vs-icon-recent-shadow, 0 0 10px rgba(244, 63, 94, 0.4));
+  color: var(--vs-icon-recent-color, #fb7185);
+  border-color: var(--vs-icon-recent-border, rgba(244, 63, 94, 0.3));
+}
+
+/* Drag and Drop styles for LiveTV Category Sidebar */
+.category-strip.drag-hotkey-active .category-source-header,
+.category-strip.drag-hotkey-active .category-item,
+.category-strip.drag-hotkey-active .category-folder-header {
+  cursor: grab !important;
+  user-select: none !important;
+}
+
+.category-strip.drag-hotkey-active .category-source-header *,
+.category-strip.drag-hotkey-active .category-item *,
+.category-strip.drag-hotkey-active .category-folder-header * {
+  cursor: grab !important;
+  user-select: none !important;
+}
+
+.category-strip.drag-hotkey-active .category-source-header:active,
+.category-strip.drag-hotkey-active .category-item:active,
+.category-strip.drag-hotkey-active .category-folder-header:active,
+.sortable-sidebar-item.dragging .category-source-header,
+.sortable-sidebar-item.dragging .category-item,
+.sortable-sidebar-item.dragging .category-folder-header {
+  cursor: grabbing !important;
+}
+
+.sortable-sidebar-item {
+  position: relative;
+  user-select: none;
+}
+
+.sortable-sidebar-item.dragging {
+  opacity: 0.5;
+  z-index: 99;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.sortable-sidebar-item.drop-above::before,
+.sortable-sidebar-item.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+  z-index: 100;
+}
+
+.sortable-sidebar-item.drop-above::before {
+  top: -1px;
+}
+
+.sortable-sidebar-item.drop-below::after {
+  bottom: -1px;
+}
+
+/* Base styles for list bars (v1 fallbacks; v2 pill / v3 clean look via --cat-list-* tokens) */
+.category-list-bar {
+  width: var(--cat-list-width, 100%);
+  box-sizing: var(--cat-list-box-sizing, border-box);
+  background: var(--cat-list-bg, rgba(255, 255, 255, 0.02));
+  border-top: var(--cat-list-border-top, 1px solid rgba(255, 255, 255, 0.04));
+  border-bottom: var(--cat-list-border-bottom, none);
+  border-left: var(--cat-list-border-left, none);
+  border-right: var(--cat-list-border-right, none);
+  padding: var(--cat-list-padding, 8px 12px);
+  border-radius: var(--cat-list-radius, 0);
+  position: var(--cat-list-pos, static);
+  overflow: var(--cat-list-overflow, visible);
+  transition: var(--cat-list-transition, none);
+  box-shadow: var(--cat-list-shadow, none);
+}
+
+/* Strip-scoped spacing — v2 bars inherit .category-item's 3px 0 gap, v3 uses the
+   clean 2px 8px; VOD sidebar items (pure list-bars) keep .vertical-sidebar__item's. */
+.category-strip-top .category-list-bar:not(.custom-group-item),
+.custom-groups-section .category-list-bar.custom-group-item {
+  margin: var(--cat-list-strip-margin, 0);
+}
+
+/* Resting text color — strip-scoped so VOD sidebar items keep .vertical-sidebar__item's
+   color, and excluded on hover/selected so those states still win below. */
+.category-strip-top .category-list-bar:not(.custom-group-item):not(:hover):not(.selected),
+.custom-groups-section .category-list-bar.custom-group-item:not(:hover):not(.selected) {
+  color: var(--cat-list-color, var(--cat-item-color, rgba(255, 255, 255, 0.8)));
+}
+
+.category-list-bar::before {
+  content: var(--cat-list-bar-content, none);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--cat-list-bar-width, 3px);
+  height: var(--cat-list-bar-height, 0);
+  background: var(--cat-list-bar-bg, var(--accent-primary, #00d4ff));
+  border-radius: var(--cat-list-bar-radius, 0 2px 2px 0);
+  transition: var(--cat-list-bar-transition, height 0.25s cubic-bezier(0.16, 1, 0.3, 1));
+  box-shadow: var(--cat-list-bar-shadow, none);
+  pointer-events: none;
+}
+
+.category-list-bar:hover {
+  background: var(--cat-list-hover-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--cat-list-hover-border-color, rgba(255, 255, 255, 0.08));
+  transform: var(--cat-list-hover-transform, none);
+  box-shadow: var(--cat-list-hover-shadow, none);
+  color: var(--cat-list-hover-color, white);
+}
+
+.category-list-bar:hover::before {
+  height: var(--cat-list-bar-hover-height, 0);
+}
+
+.category-list-bar .category-count {
+  font-size: var(--cat-list-count-font-size, var(--cat-count-font-size, 0.7rem));
+  font-weight: var(--cat-list-count-font-weight, var(--cat-count-font-weight, 500));
+  padding: var(--cat-list-count-padding, var(--cat-count-padding, 2px 6px));
+  min-width: var(--cat-list-count-min-width, var(--cat-count-min-width, 0));
+  border-radius: var(--cat-list-count-radius, var(--cat-count-radius, 10px));
+}
+
+.epg-bold-top-categories .category-list-bar .category-name {
+  font-weight: 700 !important;
+}
+
+.epg-bold-source-categories .category-item.nested .category-name {
+  font-weight: 700 !important;
+}
+
+.sidebar-section-header {
+  font-size: var(--cat-hdr-font-size, 0.62rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: var(--cat-hdr-letter-spacing, 0.08em);
+  color: var(--cat-hdr-color, rgba(255, 255, 255, 0.3));
+  padding: var(--cat-hdr-padding, 12px 12px 6px);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+
+.sidebar-section-header::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--ssha-divider-bg, rgba(255, 255, 255, 0.06));
+}
+
+.category-item.nested {
+  padding: var(--cat-item-nested-padding, var(--cat-item-padding, 10px 12px));
+  padding-left: var(--cat-item-nested-padding-left, 28px);
+  /* Indent nested categories */
+  font-size: var(--cat-item-nested-font-size, 0.8rem);
+  border-radius: var(--cat-item-nested-radius, 0);
+  margin: var(--cat-item-nested-margin, 0);
+  background: var(--cat-item-nested-bg, transparent);
+  width: var(--cat-item-nested-width, 100%);
+  border-left: var(--cat-item-nested-border-left, none);
+  border-right: var(--cat-item-nested-border-right, none);
+  border-top: var(--cat-item-nested-border-top, none);
+  border-bottom: var(--cat-item-nested-border-bottom, none);
+  color: var(--cat-item-nested-color, rgba(255, 255, 255, 0.8));
+}
+
+.category-item.selected {
+  background: var(--cat-item-selected-bg, var(--accent-glow, rgba(0, 212, 255, 0.15)));
+  border-color: var(--cat-item-selected-border-color, transparent);
+  box-shadow: var(--cat-item-selected-shadow, none);
+  color: var(--accent-primary, #00d4ff);
+}
+
+.category-item.selected .category-count {
+  background: var(--cat-item-selected-count-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent));
+  color: var(--cat-item-selected-count-color, var(--accent-primary, #00d4ff));
+  box-shadow: var(--cat-item-selected-count-shadow, none);
+}
+
+/* Custom-groups section — v2 pill look via --cat-custom-* tokens (v3 redefines
+   them to the clean list-bar look; v1 falls back to the shared list-bar base). */
+.custom-groups-section .category-item {
+  background: var(--cat-custom-bg, rgba(255, 255, 255, 0.02));
+  border-top: var(--cat-custom-border-top, 1px solid rgba(255, 255, 255, 0.04));
+  border-bottom: var(--cat-custom-border-bottom, none);
+  border-left: var(--cat-custom-border-left, none);
+  border-right: var(--cat-custom-border-right, none);
+}
+
+.custom-groups-section .category-item::before {
+  background: var(--cat-custom-bar-bg, var(--accent-primary, #00d4ff));
+  box-shadow: var(--cat-custom-bar-shadow, none);
+}
+
+.custom-groups-section .category-item.selected::before {
+  box-shadow: var(--cat-custom-bar-selected-shadow, var(--cat-custom-bar-shadow, none));
+}
+
+.custom-groups-section .category-item.selected {
+  background: var(--cat-custom-selected-bg, rgba(0, 212, 255, 0.1));
+  border-color: var(--cat-custom-selected-border-color, rgba(0, 212, 255, 0.2));
+}
+
+.custom-groups-section .category-item.selected .category-count {
+  background: var(--cat-custom-selected-count-bg, var(--cat-item-selected-count-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent)));
+  color: var(--cat-custom-selected-count-color, var(--accent-primary, #00d4ff));
+}
+
+/* Selected state — after .category-item.selected so dual-class strip bars (which carry
+   both classes) resolve to the list-bar clean look instead of the item pill. */
+.category-list-bar.selected {
+  background: var(--cat-list-selected-bg, rgba(0, 212, 255, 0.1));
+  border-color: var(--cat-list-selected-border-color, rgba(0, 212, 255, 0.2));
+  box-shadow: var(--cat-list-selected-shadow, none);
+  color: var(--cat-list-selected-color, var(--accent-primary, #00d4ff));
+  position: var(--cat-list-selected-pos, static);
+}
+
+/* v3 clean-look selected indent (strip bars only) */
+.category-strip-top .category-list-bar:not(.custom-group-item).selected,
+.custom-groups-section .category-list-bar.custom-group-item.selected {
+  padding-left: var(--cat-list-selected-padding-left, 12px);
+}
+
+.category-list-bar.selected::before {
+  height: var(--cat-list-bar-selected-height, 0);
+  box-shadow: var(--cat-list-bar-selected-shadow, var(--cat-list-bar-shadow, none));
+}
+
+.category-list-bar.selected .category-count {
+  background: var(--cat-list-count-selected-bg, var(--cat-item-selected-count-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent)));
+  color: var(--cat-list-count-selected-color, var(--cat-item-selected-count-color, var(--accent-primary, #00d4ff)));
+  box-shadow: var(--cat-list-count-selected-shadow, var(--cat-item-selected-count-shadow, none));
+}
+
+.category-source-group {
+  margin-top: var(--cat-src-group-margin-top, 4px);
+  border-radius: var(--cat-src-group-radius, 0);
+  background: var(--cat-src-group-bg, transparent);
+  border: var(--cat-src-group-border, none);
+  /* Create positioning context for sticky header */
+  position: relative;
+}
+
+.category-source-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--cat-src-header-padding, 10px 12px);
+  border: none;
+  border-top: var(--cat-src-header-border-top, 1px solid rgba(255, 255, 255, 0.05));
+  border-bottom: var(--cat-src-header-border-bottom, none);
+  background: var(--cat-src-header-bg, rgba(255, 255, 255, 0.03));
+  color: var(--cat-src-header-color, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  text-align: left;
+  transition: var(--cat-src-header-transition, background 0.15s ease, color 0.15s ease);
+  /* Ensure sticky works properly */
+  position: relative;
+}
+
+.category-source-header:hover {
+  background: var(--cat-src-header-hover-bg, rgba(255, 255, 255, 0.06));
+  color: var(--cat-src-header-hover-color, rgba(255, 255, 255, 0.9));
+  border-top-color: var(--cat-src-header-hover-border-top-color, rgba(255, 255, 255, 0.05));
+}
+
+/* When source is expanded, make header sticky within scrollable area */
+.category-source-group.is-expanded .category-source-header {
+  position: sticky !important;
+  top: 0;
+  z-index: 100;
+  background: var(--cat-src-expanded-bg, rgba(20, 20, 25, 0.98));
+  border-bottom: var(--cat-src-expanded-border-bottom, 1px solid rgba(255, 255, 255, 0.1));
+  box-shadow: var(--cat-src-expanded-shadow, 0 2px 8px rgba(0, 0, 0, 0.3));
+  backdrop-filter: var(--cat-src-expanded-filter, none);
+  -webkit-backdrop-filter: var(--cat-src-expanded-filter, none);
+}
+
+.category-source-group.is-expanded .category-source-header:hover {
+  background: var(--cat-src-expanded-hover-bg, rgba(35, 35, 45, 0.98));
+}
+
+.source-header-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+
+.source-name-container {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, black 85%, transparent 100%);
+}
+
+.source-name {
+  font-size: var(--cat-src-name-font-size, 0.75rem);
+  font-weight: var(--cat-src-name-weight, 700);
+  text-transform: uppercase;
+  letter-spacing: var(--cat-src-name-letter-spacing, 0.03em);
+  line-height: var(--cat-src-name-line-height, 1);
+  color: var(--src-name-color, inherit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.category-source-header:hover .source-name {
+  color: var(--src-name-hover-color, inherit);
+}
+
+.category-source-header:hover .source-name.overflowing {
+  overflow: visible;
+  display: inline-block;
+  animation: scroll-text 8s linear infinite;
+  padding-right: 20px;
+}
+
+@keyframes scroll-text {
+  0% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.source-count {
+  font-size: var(--cat-src-count-font-size, 0.65rem);
+  font-weight: var(--cat-src-count-font-weight, 600);
+  padding: var(--cat-src-count-padding, 1px 5px);
+  border-radius: var(--cat-src-count-radius, 8px);
+  background: var(--cat-src-count-bg, rgba(255, 255, 255, 0.05));
+  color: var(--cat-src-count-color, rgba(255, 255, 255, 0.4));
+  margin-left: 8px;
+  line-height: var(--cat-src-count-line-height, 1);
+  transition: var(--cat-src-count-transition, none);
+  font-variant-numeric: var(--cat-src-count-tabular, normal);
+}
+
+.category-source-header:hover .source-count {
+  background: var(--cat-src-count-hover-bg, var(--cat-src-count-bg, rgba(255, 255, 255, 0.05)));
+  color: var(--cat-src-count-hover-color, var(--cat-src-count-color, rgba(255, 255, 255, 0.4)));
+}
+
+.category-source-content {
+  padding: var(--cat-src-content-padding, 0);
+  background: var(--cat-src-content-bg, rgba(0, 0, 0, 0.1));
+}
+
+.category-name {
+  font-size: var(--cat-name-font-size, var(--category-font-size, 13px));
+  font-weight: var(--cat-name-weight, 400);
+  letter-spacing: var(--cat-name-letter-spacing, normal);
+  display: var(--cat-name-display, inline);
+  align-items: var(--cat-name-align, normal);
+  gap: var(--cat-name-gap, normal);
+  color: var(--cat-name-color, inherit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.category-list-bar .category-name {
+  font-size: var(--cat-list-name-font-size, var(--category-font-size, 13px));
+  font-weight: var(--cat-name-weight, 400);
+}
+
+.category-item.selected .category-name,
+.category-list-bar.selected .category-name,
+.category-item.active .category-name,
+.category-list-bar.active .category-name {
+  color: var(--cat-name-selected-color, var(--accent-primary, #00d4ff));
+}
+
+.category-item:hover:not(.selected) .category-name,
+.category-list-bar:hover:not(.selected) .category-name {
+  color: var(--cat-name-hover-color, inherit);
+}
+
+/* Category name scrolling animation - only when overflowing */
+.category-item:hover .category-name.overflowing {
+  overflow: visible;
+  display: inline-block;
+  animation: scroll-text 8s linear infinite;
+  padding-right: 20px;
+}
+
+.category-count {
+  font-size: var(--cat-count-font-size, 0.7rem);
+  font-weight: var(--cat-count-font-weight, 500);
+  padding: var(--cat-count-padding, 2px 6px);
+  border-radius: var(--cat-count-radius, 10px);
+  background: var(--cat-count-bg, rgba(255, 255, 255, 0.1));
+  color: var(--cat-count-color, rgba(255, 255, 255, 0.6));
+  flex-shrink: 0;
+  min-width: var(--cat-count-min-width, 0);
+  text-align: var(--cat-count-text-align, left);
+  transition: var(--cat-count-transition, none);
+  font-variant-numeric: var(--cat-count-tabular, normal);
+}
+
+.category-item:hover .category-count {
+  background: var(--cat-count-hover-bg, var(--cat-count-bg, rgba(255, 255, 255, 0.1)));
+  color: var(--cat-count-hover-color, var(--cat-count-color, rgba(255, 255, 255, 0.6)));
+}
+
+.category-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.category-empty p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.category-empty .hint {
+  margin-top: 8px;
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+/* Category Strip Resizer - sits just outside the right edge so it doesn't overlap the scrollbar */
+.category-strip-resizer {
+  position: absolute;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.category-strip-resizer::after {
+  content: '';
+  width: 3px;
+  height: 32px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.25));
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.category-strip-resizer:hover::after {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
+  height: 48px;
+}
+
+/* Section divider between top section and scrollable sources (v2 accent via
+   --cat-divider-* tokens) */
+.section-divider {
+  height: 1px;
+  background: var(--cat-divider-bg, linear-gradient(90deg, 
+    transparent 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    transparent 100%
+  ));
+  margin: 4px auto 8px;
+  width: var(--cat-divider-width, calc(100% - 24px));
+}
+
+/* ==========================================================================
+    NON-GLASS THEME GRADIENT FIX
+   Since LiveTV forces the .app container to be transparent (to show video),
+   solid themes with global gradients (like solid-berry) lose their background.
+   We explicitly attach the viewport-fixed gradient under these panels, while
+   tinting them with their default overlay colors for contrast.
+   ========================================================================== */
+[data-theme]:not([data-theme*="glass-"]) .category-strip {
+  background: var(--glass-surface-bg, var(--bg-primary, #1a1a1a));
+  background-attachment: var(--glass-surface-bg-attachment, fixed);
+}
+
+/* ==========================================================================
+   RESPONSIVE SCALING FOR HIGH-DPI / SMALL VIEWPORTS
+   ========================================================================== */
+@media (max-height: 750px), (max-width: 1200px) {
+  .category-item {
+    padding: 6px 10px;
+  }
+  /* Strip bars compact via the media token on small viewports (v1/v2), while
+     v3 keeps its fixed clean-look padding (--cat-list-media-padding). */
+  .category-list-bar {
+    padding: var(--cat-list-media-padding, 6px 10px);
+  }
+  .category-name {
+    font-size: var(--cat-name-media-font-size, var(--category-font-size, 12px));
+  }
+  .category-icon {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  .category-source-header {
+    padding: var(--cat-src-header-media-padding, 6px 10px);
+  }
+  .sidebar-section-header {
+    padding: 8px 10px 4px;
+    font-size: 0.58rem;
+  }
+}
+
+/* ==========================================================================
+   CUSTOM PLAYLISTS SIDEBAR STYLES
+   ========================================================================== */
+
+
+
+.playlist-cat-item {
+  position: relative;
+}
+
+.playlist-indiv-item {
+  border-top: 1px dashed rgba(255, 255, 255, 0.04);
+}
+
+.playlist-empty-hint {
+  padding: 12px 16px;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #aaa);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+}
+
+.playlist-edit-link {
+  background: transparent;
+  border: none;
+  color: var(--accent-primary, #00d4ff);
+  font-size: 0.75rem;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-bottom: 1px dashed var(--accent-primary, #00d4ff);
+  font-family: inherit;
+}
+
+.playlist-edit-link:hover {
+  color: #fff;
+  border-color: #fff;
+}
+
+.create-playlist-btn {
+  width: calc(100% - 24px);
+  margin: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-secondary, #aaa);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-family: inherit;
+  transition: all 0.2s;
+}
+
+.create-playlist-btn:hover {
+  background: rgba(0, 212, 255, 0.04);
+  border-color: var(--accent-primary, #00d4ff);
+  color: var(--accent-primary, #00d4ff);
+}
+
+.nested-category-wrapper {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Per-source Favorites entry: give the star icon the same gap the top-level
+   Favorites button gets from .category-item-left's gap:10px. */
+.category-item.favorites-source-item .category-icon.favorites-icon {
+  margin-right: 10px;
+}
+
+.category-pin-icon {
+  color: var(--accent-primary, #00d4ff);
+  opacity: 0.85;
+  display: inline-flex;
+  align-items: center;
+  margin-right: 3px;
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.category-item:hover .category-pin-icon {
+  opacity: 1;
+}
+
+.category-source-header {
+  height: 40px;
+  box-sizing: border-box;
+}
+
+.category-item.nested {
+  height: 38px;
+  box-sizing: border-box;
+}
+
+.category-item.nested.is-pinned {
+  /* position:sticky is now applied to the .sortable-sidebar-item wrapper div
+     via inline style so it has the full scroll container as its containing block.
+     Keeping it here on the inner button would trap sticky within the ~38px wrapper. */
+  z-index: var(--cat-item-pinned-z, 90);
+  background: var(--cat-item-pinned-bg, rgba(20, 20, 25, 0.98));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  margin: 0; /* pinned rows are flush (v3 overrides nested's 2px 0) */
+  height: 38px;
+  padding: var(--cat-item-pinned-padding, var(--cat-item-nested-padding, var(--cat-item-padding, 10px 12px)));
+  padding-left: var(--cat-item-nested-padding-left, 28px);
+}
+
+.category-item.nested.folder-nested.is-pinned {
+  z-index: 90 !important;
+}
+
+.category-item.nested.is-pinned.selected {
+  background: var(--cat-item-pinned-selected-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgb(20, 20, 25))) !important;
+}
+
+/* Category Folders in Sidebar */
+.category-folder-group {
+  margin: 1px 0;
+  position: relative;
+}
+
+.category-folder-header {
+  width: 100%;
+  height: 34px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 20px;
+  background: rgba(255, 255, 255, 0.02);
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* Sticky folder header when expanded or pinned */
+.category-folder-header.is-pinned {
+  position: sticky !important;
+  z-index: 96;
+  background: var(--cat-folder-pinned-bg, rgba(18, 18, 24, 0.98));
+  border-bottom: var(--cat-folder-pinned-border-bottom, 1px solid var(--accent-primary-transparent, rgba(0, 212, 255, 0.2)));
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(var(--cat-folder-pinned-blur, 10px));
+}
+
+.category-folder-header.is-pinned:hover {
+  background: var(--cat-folder-pinned-hover-bg, var(--surface-hover, rgba(28, 28, 38, 0.98)));
+  color: var(--text-primary, #fff);
+}
+
+/* ---------------------------------------------------------------------------
+   Sidebar row virtualization (CSS-only). With many sources expanded the sidebar
+   holds thousands of rows; the browser pays layout/paint for all of them on
+   every scroll/interaction. content-visibility: auto makes the browser skip
+   off-screen rows entirely (same trick already used for EPG program blocks).
+
+   Applied ONLY to ordinary (non-pinned) category rows, and ONLY in the legacy
+   renderer (the virtualized renderer already unmounts off-screen rows, so
+   content-visibility would be redundant there, and its containment can
+   interfere with the sticky overlay). Source headers, folder headers, and
+   pinned categories rely on position: sticky (source/folder headers are
+   sticky when expanded; pinned rows stick via the sortable wrapper) and
+   content-visibility containment on sticky elements is risky in Chromium, so
+   those are excluded and sticky pins keep working exactly as before. Fixed row
+   heights make the intrinsic-size hints exact. Pure rendering hint — no visual
+   change.
+   --------------------------------------------------------------------------- */
+.category-strip-scrollable .category-item.nested:not(.is-pinned):not(.virtualized-sidebar .category-item.nested) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 38px;
+}
+
+.category-folder-group.is-expanded .category-folder-header {
+  position: var(--cat-folder-expanded-pos, static);
+  top: var(--cat-folder-expanded-top, auto);
+  z-index: var(--cat-folder-expanded-z, auto);
+  background: var(--cat-folder-expanded-bg, rgba(18, 18, 24, 0.98));
+  border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(10px);
+  color: var(--cat-folder-expanded-color, rgba(255, 255, 255, 0.75));
+}
+
+.category-folder-group.is-expanded .category-folder-header:hover {
+  background: rgba(28, 28, 38, 0.98);
+  color: #fff;
+}
+
+.category-folder-header:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.folder-header-left {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.folder-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-primary, #00d4ff);
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.folder-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.folder-count {
+  font-size: 0.65rem;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  margin-left: 8px;
+}
+
+.category-folder-content {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.category-item.nested.folder-nested {
+  /* Match the indent of regular nested categories instead of the extra folder indent */
+  padding-left: var(--cat-item-nested-padding-left, 28px) !important;
+}
+
+/* Virtualized pinned overlay (Slice 3, flag-gated path only).
+   The container is height:0 + overflow:visible sticky so it sits on top of the
+   scrolled list without reserving any vertical space (no scrollbar jump). Rows
+   are absolutely positioned with cumulative tops (computed in TS) and get an
+   opaque, full-width background so scrolled content never shows through. */
+.virtualized-pins .virtualized-pin-row {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--cat-pin-stack-bg, rgba(18, 18, 23, 0.98));
+}
+
+.virtualized-pins .virtualized-pin-row > * {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.virtualized-pin-slot-spacer {
+  width: 100%;
+  display: block;
+  height: 0; /* height set inline to the pinned row height */
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Virtualized pointer drag (Slice 4). The in-place node is dimmed while
+   dragging (DragOverlay carries the moving copy), and the drop indicator
+   mirrors the legacy .sortable-sidebar-item lines. */
+.virtual-sortable-row {
+  position: relative;
+  user-select: none;
+  height: 100%;
+}
+
+.virtual-sortable-row.drop-above::before,
+.virtual-sortable-row.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 1px;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.6);
+  z-index: 100;
+}
+
+.virtual-sortable-row.drop-above::before {
+  top: -1px;
+}
+
+.virtual-sortable-row.drop-below::after {
+  bottom: -1px;
+}
+
+.virtual-drag-overlay {
+  width: var(--category-strip-width, 260px);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  background: var(--cat-item-pinned-bg, rgba(20, 20, 25, 0.98));
+  /* Presentation-only copy: the live row is still mounted (dimmed) in the list,
+     so the overlay must never receive clicks/context-menus. RenderRow carries
+     the row's own onClick/onContextMenu handlers; making the copy inert keeps a
+     short-drag release from selecting or opening the context menu via overlay. */
+  pointer-events: none;
+}
+
+

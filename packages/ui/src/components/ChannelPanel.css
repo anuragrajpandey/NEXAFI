@@ -1,0 +1,3717 @@
+/* Full-width EPG-style Guide Panel */
+.guide-panel {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--page-top, 32px);
+  bottom: 0;
+  padding-left: 0;
+  padding-top: var(--page-pad-top, 0);
+  /* No sidebar space by default */
+  box-sizing: border-box;
+  /* Transparent background to allow MPV video to show through preview area */
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  z-index: 80;
+
+  /* GPU acceleration hints to prevent smearing */
+  transform: translate3d(0, 100%, 0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+
+  opacity: 0;
+  /* Removed transform and padding-left transitions for instant snapping */
+  transition: opacity 0.15s ease;
+}
+
+.guide-panel.visible {
+  transform: none;
+  opacity: 1;
+  will-change: auto;
+}
+
+/* With categories visible */
+.guide-panel.with-categories {
+  padding-left: var(--category-strip-content-width, 240px);
+}
+
+
+/* Current Time Indicator - Vertical line with dot */
+.guide-current-time-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gcti-bg, linear-gradient(to bottom, var(--accent-primary, #00d4ff) 0%, var(--accent-primary, #00d4ff) 100%));
+  box-shadow: var(--gcti-shadow, none);
+  z-index: 100;
+  pointer-events: none;
+}
+
+/* Time Header - ensure proper stacking context */
+.guide-time-header {
+  position: relative;
+  z-index: 5;
+}
+
+/* Time header specific styling for the indicator */
+.guide-time-header .guide-current-time-indicator {
+  position: absolute;
+  top: 28px; /* Position at bottom of time header (height is 32px) */
+  left: 0;
+  height: 8px;
+  width: 2px;
+  background: var(--gcti-bg, transparent);
+  box-shadow: var(--gcti-shadow, none);
+  z-index: 100;
+}
+
+.guide-time-header .guide-current-time-indicator::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid var(--accent-primary, #00d4ff);
+  filter: var(--gcti-before-filter, none);
+  pointer-events: none;
+  z-index: 101;
+}
+
+/* Channel rows area - extends through the grid */
+.guide-channels .guide-current-time-indicator,
+.guide-content .guide-current-time-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--gcti-bg, linear-gradient(to bottom, var(--accent-primary, rgba(0, 212, 255, 0.6)) 0%, rgba(0, 212, 255, 0.3) 100%));
+  box-shadow: var(--gcti-shadow, none);
+  z-index: 200; /* Above EPG program blocks */
+  pointer-events: none;
+}
+
+.guide-channels .guide-current-time-indicator::before,
+.guide-content .guide-current-time-indicator::before {
+  display: none; /* Hide dot in channel rows, only show in header */
+}
+
+/* Split Layout Styles */
+.guide-top-section {
+  position: relative;
+  display: flex;
+  /* Height determined by children (aspect-ratio) */
+  width: 100%;
+  /* NO background here - video shows through preview area */
+  background: transparent;
+  --preview-width: 42%;
+}
+
+.guide-top-section.alternate-view {
+  flex-direction: column;
+}
+
+.guide-preview-pane {
+  flex: 0 0 var(--preview-width, 42%);
+  /* Video width increased by ~30% from 32% */
+  aspect-ratio: 16 / 9;
+  /* Fully transparent to show video - NO OVERLAY */
+  background: transparent;
+  border-right: var(--guide-preview-border-right, var(--glass-border, 1px solid rgba(255, 255, 255, 0.1)));
+  border-bottom: var(--guide-preview-border-bottom, none);
+  margin-bottom: var(--guide-preview-margin-bottom, 0);
+  border-radius: var(--guide-preview-radius, 0);
+  box-shadow: var(--guide-preview-shadow, none);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  position: relative;
+}
+
+.guide-top-section.alternate-view .guide-preview-pane {
+  /* 16:9 height-driven pane (height set inline from the draggable
+     previewHeightPx). Keeping the pane exactly 16:9 matches the traditional
+     view and prevents mpv re-fitting its embedded window when a stream's
+     first frame lands (a non-16:9 pane made the video blow up to
+     ~fullscreen behind the transparent guide). Centered so the surrounding
+     surfaces stay opaque — the only transparent region over the video is the
+     pane itself, identical to the traditional view. */
+  flex: none;
+  width: auto;
+  aspect-ratio: 16 / 9;
+  align-self: center;
+  max-width: 100%;
+  border-right: none;
+  border-bottom: var(--guide-preview-border-bottom, var(--glass-border, 1px solid rgba(255, 255, 255, 0.1)));
+  margin-bottom: var(--guide-preview-margin-bottom, 0);
+}
+
+/* Video container that holds the MPV video */
+.guide-preview-video {
+  flex: 1;
+  position: relative;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: var(--guide-preview-video-radius, 0);
+  box-shadow: var(--guide-preview-video-shadow, none);
+  min-height: 0;
+  cursor: pointer;
+}
+
+.guide-preview-video:hover {
+  cursor: pointer;
+}
+
+/* Optional: Indicate it is a preview area if no video is selected */
+.guide-preview-placeholder {
+  color: var(--guide-placeholder-color, rgba(255, 255, 255, 0.5));
+  font-size: var(--guide-placeholder-font-size, 1.2rem);
+  font-weight: var(--guide-placeholder-font-weight, 400);
+  letter-spacing: var(--guide-placeholder-letter-spacing, normal);
+  background: var(--guide-placeholder-bg, var(--surface-color, rgba(0, 0, 0, 0.5)));
+  backdrop-filter: var(--guide-placeholder-filter, blur(var(--glass-blur, 10px)));
+  -webkit-backdrop-filter: var(--guide-placeholder-filter, blur(var(--glass-blur, 10px)));
+  padding: var(--guide-placeholder-padding, 20px 30px);
+  border-radius: var(--guide-placeholder-radius, 12px);
+  border: var(--guide-placeholder-border, var(--glass-border, 1px solid rgba(255, 255, 255, 0.1)));
+  box-shadow: var(--guide-placeholder-shadow, none);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Mini Media Bar for EPG Preview - Gradient scrim with floating pill buttons */
+.guide-preview-minibar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 20;
+  padding: 24px 16px 12px 16px;
+  background: var(--gpm-bg, linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.58) 55%,
+    rgba(0, 0, 0, 0.18) 85%,
+    transparent 100%
+  ));
+  backdrop-filter: var(--gpm-filter, blur(12px) saturate(140%));
+  -webkit-backdrop-filter: var(--gpm-filter, blur(12px) saturate(140%));
+  border-radius: 0 0 12px 12px;
+}
+
+/* Seek bar row */
+.guide-minibar-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-minibar-seek-time {
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.guide-minibar-seek-bar {
+  position: relative;
+  flex: 1;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: height 0.15s ease;
+}
+
+.guide-minibar-seek-bar:hover,
+.guide-minibar-seek-bar.active {
+  height: 5px;
+}
+
+.guide-minibar-seek-fill {
+  position: relative;
+  height: 100%;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 2px;
+}
+
+/* Scrubber dot on hover via pseudo-element */
+.guide-minibar-seek-fill::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.guide-minibar-seek-bar:hover .guide-minibar-seek-fill::after,
+.guide-minibar-seek-bar.active .guide-minibar-seek-fill::after,
+.guide-minibar-seek-bar.dragging .guide-minibar-seek-fill::after {
+  opacity: 1;
+}
+
+.guide-minibar-seek-bar.dragging .guide-minibar-seek-fill::after {
+  transform: translateY(-50%) scale(1.15);
+}
+
+.guide-minibar-seek-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: rgba(10, 10, 15, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  white-space: nowrap;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.guide-minibar-seek-tip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(10, 10, 15, 0.95);
+}
+
+/* Buttons row — three floating groups */
+.guide-minibar-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.guide-minibar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Volume — collapsible glass pill */
+.guide-minibar-volume {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  height: 28px;
+  width: 28px;
+  overflow: hidden;
+  transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s;
+}
+
+.guide-minibar-volume:hover {
+  width: 90px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.guide-minibar-volume-slider {
+  width: 0;
+  opacity: 0;
+  margin-left: 2px;
+  margin-right: 6px;
+  transition: all 0.2s ease;
+  height: 3px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  cursor: pointer;
+  transform-origin: left center;
+}
+
+.guide-minibar-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.3);
+  cursor: pointer;
+}
+
+.guide-minibar-volume:hover .guide-minibar-volume-slider {
+  width: 42px;
+  opacity: 1;
+}
+
+/* Volume button — nested inside the pill, flush to left */
+.guide-minibar-volume .guide-minibar-btn {
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  padding: 5px !important;
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 14px;
+}
+
+.guide-minibar-volume .guide-minibar-btn:hover {
+  color: var(--accent-primary, #00d4ff) !important;
+  transform: none !important;
+}
+
+/* Standard glass pill buttons (28×28, 6px radius) */
+.guide-minibar-btn {
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  padding: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.guide-minibar-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.guide-minibar-btn:active {
+  transform: scale(0.92);
+}
+
+/* Primary button (play/pause) — larger circle with glow */
+.guide-minibar-btn-primary {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  padding: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+}
+
+.guide-minibar-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.guide-minibar-btn-primary:active {
+  transform: scale(0.92);
+}
+
+.guide-minibar-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(0, 212, 255, 0.3);
+  color: #00d4ff;
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 212, 255, 0.25), 0 0 8px rgba(0, 212, 255, 0.15);
+}
+
+.guide-minibar-btn:active {
+  transform: scale(0.92);
+}
+
+/* Hero Play/Pause Button */
+.guide-minibar-btn.guide-minibar-btn-play {
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.guide-minibar-btn.guide-minibar-btn-play:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(0, 212, 255, 0.4);
+  color: #00d4ff;
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3), 0 0 10px rgba(0, 212, 255, 0.2);
+}
+.guide-minibar-aspect-item {
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-align: left;
+  transition: all 0.15s;
+}
+
+.guide-minibar-aspect-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.guide-minibar-aspect-item.active {
+  background: rgba(0, 212, 255, 0.15);
+  color: #00d4ff;
+  font-weight: 600;
+}
+
+.guide-info-pane {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: var(--preview-width, 42%);
+  background: var(--glass-info-bg, var(--bg-overlay, rgba(0, 0, 0, 0.95)));
+  backdrop-filter: var(--glass-info-filter, blur(var(--glass-blur, 20px)));
+  -webkit-backdrop-filter: var(--glass-info-filter, blur(var(--glass-blur, 20px)));
+  border: var(--glass-surface-border, none);
+  border-left: var(--glass-info-border-left, var(--glass-surface-border, none));
+  border-bottom: var(--glass-surface-border, none);
+  border-radius: var(--glass-surface-radius, 0);
+  box-shadow: var(--glass-info-shadow, var(--glass-surface-shadow, none));
+  padding: var(--glass-info-padding, 30px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+.guide-info-pane::before,
+.guide-info-pane::after {
+  content: '';
+  flex: 1 0 0;
+}
+
+.guide-info-pane > * {
+  flex-shrink: 0;
+}
+
+.guide-info-failover-corner {
+  position: absolute;
+  bottom: 24px;
+  right: 48px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+}
+
+
+
+
+.guide-top-section.alternate-view .guide-info-pane {
+  position: relative;
+  left: auto;
+  right: auto;
+  top: auto;
+  bottom: auto;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  padding: 16px 24px;
+  /* The base info-pane rule is content-box, so width:100% + padding pushed
+     the pane past the right edge of the column (cutting off the schedule). */
+  box-sizing: border-box;
+}
+
+.guide-top-section.alternate-view .guide-info-alternate-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  width: 100%;
+}
+
+.guide-top-section.alternate-view .guide-info-alternate-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.guide-grid-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-grid-bg, var(--bg-overlay, rgba(0, 0, 0, 0.95)));
+  backdrop-filter: var(--glass-grid-filter, blur(var(--glass-blur, 20px)));
+  -webkit-backdrop-filter: var(--glass-grid-filter, blur(var(--glass-blur, 20px)));
+  border: var(--glass-surface-border, none);
+  border-radius: var(--glass-panel-radius, 0);
+  box-shadow: var(--glass-grid-shadow, var(--glass-surface-shadow, none));
+  overflow: hidden;
+  /* Ensure virtual list scrolls inside */
+  position: relative;
+}
+
+/* EPG Channel Column Resizer */
+.epg-channel-resizer {
+  position: absolute;
+  left: var(--epg-channel-column-width, 264px);
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 50;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.epg-channel-resizer::after {
+  content: '';
+  width: 2px;
+  height: 24px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.3));
+  border-radius: 1px;
+  transition: all 0.2s ease;
+}
+
+.epg-channel-resizer:hover::after {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 8px var(--accent-primary, #00d4ff);
+}
+
+/* Program Details Styles (typography driven by per-version --guide-* tokens;
+   v1 uses the fallbacks, v2/v3 supply the modern fonts via ModernV2.css) */
+.guide-program-title {
+  font-size: var(--guide-title-font-size, var(--epg-title-font-size, 32px));
+  font-weight: var(--guide-title-font-weight, 600);
+  margin-bottom: 8px;
+  color: var(--text-primary, white);
+  word-wrap: break-word;
+  letter-spacing: var(--guide-title-letter-spacing, normal);
+  line-height: var(--guide-title-line-height, normal);
+  text-shadow: var(--guide-title-text-shadow, none);
+  background: var(--guide-title-bg, none);
+  -webkit-background-clip: var(--guide-title-bg-clip, border-box);
+  -webkit-text-fill-color: var(--guide-title-fill, currentColor);
+  background-clip: var(--guide-title-bg-clip, border-box);
+}
+
+.guide-program-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  margin-top: var(--guide-meta-margin-top, 0);
+  color: var(--guide-meta-color, var(--text-secondary, rgba(255, 255, 255, 0.7)));
+  font-size: var(--guide-meta-font-size, 1rem);
+  font-weight: var(--guide-meta-font-weight, 400);
+}
+
+.guide-program-progress-bar {
+  height: 4px;
+  background: var(--guide-prog-bar-bg, var(--surface-border, rgba(255, 255, 255, 0.2)));
+  border-radius: 2px;
+  width: 200px;
+  overflow: hidden;
+  box-shadow: var(--guide-prog-bar-shadow, none);
+  margin-top: var(--guide-prog-bar-margin-top, 0);
+}
+
+.guide-program-progress-fill {
+  height: 100%;
+  background: var(--guide-prog-fill-bg, var(--accent-primary, #00d4ff));
+  box-shadow: var(--guide-prog-fill-shadow, none);
+  border-radius: var(--guide-prog-fill-radius, 0);
+}
+
+.guide-program-description {
+  font-size: var(--guide-desc-font-size, var(--epg-body-font-size, 16px));
+  line-height: var(--guide-desc-line-height, 1.5);
+  color: var(--guide-desc-color, var(--text-muted, rgba(255, 255, 255, 0.6)));
+  word-wrap: break-word;
+  margin-top: var(--guide-desc-margin-top, 0);
+  letter-spacing: var(--guide-desc-letter-spacing, normal);
+}
+
+.guide-top-section.alternate-view .guide-program-title {
+  font-size: calc(var(--epg-title-font-size, 32px) * 0.7);
+  margin-bottom: 0;
+}
+
+.guide-top-section.alternate-view .guide-program-meta {
+  margin-bottom: 0;
+}
+
+.guide-top-section.alternate-view .guide-program-description {
+  font-size: calc(var(--epg-body-font-size, 16px) * 0.9);
+}
+
+.guide-top-section.alternate-view .now-playing-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 100;
+  padding-bottom: 24px;
+}
+
+/* Alternate view NowPlayingBar: compact layout so buttons (especially
+   fullscreen) never get cut off. The preview pane is only ~360px tall,
+   so the bar must stay compact horizontally. */
+.guide-top-section.alternate-view .now-playing-bar .npb-progress-section {
+  flex: 1 1 0%;
+  min-width: 0;
+  max-width: none;
+}
+
+.guide-top-section.alternate-view .now-playing-bar .npb-controls-row {
+  flex-wrap: wrap;
+  gap: 10px;
+  row-gap: 6px;
+}
+
+/* Tighten up extra-controls spacing */
+.guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+  margin-left: 0;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Smaller volume slider in alternate view */
+.guide-top-section.alternate-view .now-playing-bar .npb-volume-slider {
+  width: 50px;
+}
+
+/* Hide description in alternate view bar — it's shown in the info pane below */
+.guide-top-section.alternate-view .now-playing-bar .npb-description-section,
+.guide-top-section.alternate-view .now-playing-bar .npb-divider {
+  display: none;
+}
+
+/* Tighter channel info in alternate view */
+.guide-top-section.alternate-view .now-playing-bar .npb-channel-section {
+  max-width: 220px;
+}
+
+/* Progressive collapse at moderate/narrow widths in alternate view */
+@media (max-width: 1000px) {
+  .guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .guide-top-section.alternate-view .now-playing-bar .npb-channel-up-btn,
+  .guide-top-section.alternate-view .now-playing-bar .npb-channel-down-btn {
+    display: none;
+  }
+}
+
+/* Header */
+.guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-bottom: var(--guide-header-border-bottom, var(--glass-border, 1px solid rgba(255, 255, 255, 0.08)));
+  background: var(--guide-header-bg, var(--surface-color, rgba(20, 20, 20, 0.85)));
+  backdrop-filter: var(--guide-header-filter, blur(var(--glass-blur, 10px)));
+  -webkit-backdrop-filter: var(--guide-header-filter, blur(var(--glass-blur, 10px)));
+  flex-shrink: 0;
+  position: relative;
+  z-index: 200;
+}
+
+.guide-header-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  row-gap: 6px;
+  min-width: 0;
+}
+
+.guide-current-time {
+  font-size: var(--guide-clock-font-size, 1.4rem);
+  font-weight: 300;
+  color: var(--accent-primary, #00d4ff);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--guide-clock-letter-spacing, normal);
+  text-shadow: var(--guide-clock-text-shadow, none);
+}
+
+.guide-category {
+  font-size: var(--guide-category-font-size, 1rem);
+  font-weight: var(--guide-category-font-weight, 500);
+  color: var(--text-primary, white);
+}
+
+.guide-channel-count {
+  font-size: 0.85rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+/* Channel Search Filter in EPG Header Spacer */
+.channel-search-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.channel-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 8px;
+  box-sizing: border-box;
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.channel-search-input-wrapper:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.channel-search-input-wrapper.focused {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent);
+}
+
+.channel-search-input-wrapper .search-icon {
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  flex-shrink: 0;
+}
+
+.channel-search-input-wrapper.focused .search-icon {
+  color: var(--accent-primary, #00d4ff);
+}
+
+.channel-search-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary, white);
+  font-size: 0.82rem;
+  font-family: inherit;
+  padding: 0;
+}
+
+.channel-search-input::placeholder {
+  color: var(--text-muted, rgba(255, 255, 255, 0.35));
+}
+
+/* Manage Channels Button */
+/* Manage Channels, Refresh Source, EPG Shift & Action Buttons
+   (per-version --guide-btn-* tokens from ModernV2/ModernV3) */
+.guide-manage-channels-btn,
+.guide-refresh-source-btn,
+.guide-epg-shift-btn {
+  padding: var(--guide-btn-padding, 6px 8px);
+  border: var(--guide-btn-border, var(--glass-border, 1px solid rgba(255, 255, 255, 0.2)));
+  background: var(--guide-btn-bg, var(--surface-color, rgba(255, 255, 255, 0.08)));
+  color: var(--guide-btn-color, var(--text-secondary, rgba(255, 255, 255, 0.8)));
+  cursor: pointer;
+  border-radius: var(--guide-btn-radius, 6px);
+  font-size: var(--guide-btn-font-size, 0.75rem);
+  font-weight: var(--guide-btn-font-weight, 500);
+  letter-spacing: var(--guide-btn-letter-spacing, normal);
+  transition: var(--guide-btn-transition, all 0.2s ease);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.guide-manage-channels-btn:hover,
+.guide-refresh-source-btn:hover:not(:disabled),
+.guide-epg-shift-btn:hover {
+  background: var(--guide-btn-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.15)));
+  border-color: var(--guide-btn-hover-border-color, var(--accent-primary, rgba(255, 255, 255, 0.35)));
+  color: var(--guide-btn-hover-color, var(--text-primary, white));
+  padding: 6px 10px;
+  transform: var(--guide-btn-hover-transform, none);
+  box-shadow: var(--guide-btn-hover-shadow, none);
+}
+
+.guide-header-left button .btn-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.2s ease;
+  margin-left: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.guide-header-left button:hover .btn-label {
+  max-width: 180px;
+  opacity: 1;
+  margin-left: 6px;
+}
+
+.guide-refresh-source-btn:disabled {
+  opacity: var(--guide-btn-disabled-opacity, 0.7);
+  cursor: not-allowed;
+  background: var(--guide-btn-disabled-bg, var(--surface-color, rgba(255, 255, 255, 0.08)));
+}
+
+.guide-refresh-source-btn .sync-spinner {
+  display: inline-block;
+  animation: var(--guide-spinner-anim, spin 1s linear infinite);
+  font-size: var(--guide-spinner-font-size, 1em);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.guide-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* EPG Alphabet A-Z Dropdown Menu */
+.epg-alphabet-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.epg-alphabet-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: color-mix(in srgb, var(--surface-color, #181824) 92%, #000 8%);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+  border-radius: 10px;
+  padding: 8px;
+  display: grid;
+  grid-template-columns: repeat(7, 30px);
+  gap: 4px;
+  z-index: 1050;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  width: 252px;
+  box-sizing: border-box;
+}
+
+/* Invisible bridge so hovering from button to menu doesn't trigger mouseleave */
+.epg-alphabet-menu::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.epg-alphabet-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  width: 30px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-color, #242436) 70%, rgba(255, 255, 255, 0.08) 30%);
+  color: var(--text-primary, #ffffff);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.epg-alphabet-item:hover:not(:disabled) {
+  background: var(--accent-primary, #00d4ff);
+  border-color: var(--accent-primary, #00d4ff);
+  color: #000000;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+}
+
+.epg-alphabet-item.disabled,
+.epg-alphabet-item:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  background: transparent;
+  border-color: transparent;
+}
+
+/* EPG Resolution Filter Dropdown Menu */
+.epg-resolution-dropdown-container {
+  position: relative;
+  display: inline-block;
+}
+
+.epg-resolution-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.epg-resolution-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: color-mix(in srgb, var(--surface-color, #181824) 92%, #000 8%);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+  border-radius: 10px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 1050;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  min-width: 96px;
+  box-sizing: border-box;
+}
+
+/* Invisible bridge so hovering from button to menu doesn't trigger mouseleave */
+.epg-resolution-menu::before {
+  content: '';
+  position: absolute;
+  top: -12px;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.epg-resolution-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--surface-color, #242436) 70%, rgba(255, 255, 255, 0.08) 30%);
+  color: var(--text-primary, #ffffff);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0 12px;
+  box-sizing: border-box;
+}
+
+.epg-resolution-item:hover {
+  background: var(--accent-primary, #00d4ff);
+  border-color: var(--accent-primary, #00d4ff);
+  color: #000000;
+}
+
+.epg-resolution-item.active {
+  color: var(--accent-primary, #00d4ff);
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+}
+
+/* Navigation Controls */
+.guide-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.guide-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: var(--guide-navbtn-border, var(--glass-border, 1px solid rgba(255, 255, 255, 0.1)));
+  background: var(--guide-navbtn-bg, var(--surface-color, transparent));
+  color: var(--guide-navbtn-color, var(--text-muted, rgba(255, 255, 255, 0.5)));
+  cursor: pointer;
+  border-radius: var(--guide-navbtn-radius, 4px);
+  transition: var(--guide-navbtn-transition, all 0.15s ease);
+}
+
+.guide-nav-btn:hover {
+  border-color: var(--guide-btn-hover-border-color, var(--accent-primary, rgba(255, 255, 255, 0.25)));
+  background: var(--guide-navbtn-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.05)));
+  color: var(--guide-btn-hover-color, var(--text-primary, white));
+  transform: var(--guide-navbtn-hover-transform, none);
+  box-shadow: var(--guide-navbtn-hover-shadow, none);
+}
+
+.guide-now-btn {
+  padding: 4px 12px;
+  border: var(--guide-nowbtn-border, 1px solid var(--accent-primary, rgba(0, 212, 255, 0.4)));
+  background: var(--guide-nowbtn-bg, var(--surface-glow, rgba(0, 212, 255, 0.15)));
+  color: var(--guide-nowbtn-color, var(--accent-primary, #00d4ff));
+  cursor: pointer;
+  border-radius: var(--guide-nowbtn-radius, 4px);
+  font-size: 0.75rem;
+  font-weight: var(--guide-nowbtn-font-weight, 600);
+  text-transform: uppercase;
+  letter-spacing: var(--guide-nowbtn-letter-spacing, 0.03em);
+  transition: var(--guide-nowbtn-transition, all 0.15s ease);
+}
+
+.guide-now-btn:hover:not(:disabled) {
+  background: var(--guide-nowbtn-hover-bg, var(--surface-hover, rgba(0, 212, 255, 0.25)));
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.6));
+  transform: var(--guide-nowbtn-hover-transform, none);
+  box-shadow: var(--guide-nowbtn-hover-shadow, none);
+}
+
+.guide-now-btn.inactive {
+  border-color: var(--surface-border, rgba(255, 255, 255, 0.1));
+  background: transparent;
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
+  cursor: default;
+}
+
+.guide-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: var(--guide-navbtn-border, var(--glass-border, 1px solid rgba(255, 255, 255, 0.1)));
+  background: var(--guide-navbtn-bg, var(--surface-color, transparent));
+  color: var(--guide-navbtn-color, var(--text-muted, rgba(255, 255, 255, 0.5)));
+  cursor: pointer;
+  border-radius: var(--guide-navbtn-radius, 4px);
+  transition: var(--guide-navbtn-transition, all 0.15s ease);
+}
+
+.guide-close:hover {
+  border-color: var(--guide-btn-hover-border-color, var(--accent-primary, rgba(255, 255, 255, 0.25)));
+  background: var(--guide-navbtn-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.05)));
+  color: var(--guide-btn-hover-color, var(--text-primary, white));
+  transform: var(--guide-navbtn-hover-transform, none);
+  box-shadow: var(--guide-navbtn-hover-shadow, none);
+}
+
+/* Time Header - Aligned to grid */
+.guide-time-header {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  border-bottom: var(--guide-time-header-border-bottom, var(--glass-border, 1px solid rgba(255, 255, 255, 0.06)));
+  flex-shrink: 0;
+  background: var(--guide-time-header-bg, var(--surface-color, rgba(0, 0, 0, 0.3)));
+  backdrop-filter: var(--guide-time-header-filter, blur(var(--glass-blur, 10px)));
+  -webkit-backdrop-filter: var(--guide-time-header-filter-webkit, var(--guide-time-header-filter, blur(var(--glass-blur, 10px))));
+}
+
+.guide-time-header-spacer {
+  flex-shrink: 0;
+  background: var(--guide-time-spacer-bg, transparent);
+  border-right: var(--guide-time-spacer-border-right, var(--glass-border, 1px solid rgba(255, 255, 255, 0.06)));
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  height: 100%;
+}
+
+.guide-time-header-grid {
+  position: relative;
+  height: 100%;
+  flex: 1;
+  overflow: hidden;
+}
+
+.guide-time-marker {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--gtm-bg, none);
+  font-size: var(--guide-marker-font-size, 0.8rem);
+  font-weight: var(--guide-marker-font-weight, inherit);
+  color: var(--guide-marker-color, var(--text-muted, rgba(255, 255, 255, 0.5)));
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-left: var(--guide-marker-padding-left, 8px);
+  letter-spacing: var(--guide-marker-letter-spacing, normal);
+  border-left: var(--glass-border, 1px solid rgba(255, 255, 255, 0.1));
+}
+
+.guide-time-marker:first-child {
+  font-weight: var(--guide-marker-first-weight, inherit);
+  color: var(--guide-marker-first-color, var(--text-secondary, rgba(255, 255, 255, 0.7)));
+}
+
+/* Content Area */
+.guide-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  position: relative;
+  /* Ensure absolute children position correctly */
+}
+
+.guide-channels {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto;
+  contain: layout paint;
+}
+
+.guide-channels .virtual-list,
+.search-virtuoso .virtual-list {
+  contain: layout paint;
+}
+
+/* Scrollbar - shared by the LiveTV EPG grid and the virtualized search
+   Channels tab */
+.guide-channels::-webkit-scrollbar,
+.search-virtuoso::-webkit-scrollbar {
+  width: var(--app-scrollbar-width, var(--scrollbar-width, 6px));
+}
+
+.guide-channels::-webkit-scrollbar-track,
+.search-virtuoso::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.guide-channels::-webkit-scrollbar-thumb,
+.search-virtuoso::-webkit-scrollbar-thumb {
+  background: var(--guide-scroll-ch-thumb-bg, color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, transparent));
+  border-radius: 3px;
+}
+
+.guide-channels:hover::-webkit-scrollbar-thumb,
+.search-virtuoso:hover::-webkit-scrollbar-thumb,
+.guide-channels::-webkit-scrollbar-thumb:hover,
+.search-virtuoso::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, #00d4ff));
+}
+
+/* Channel Row */
+.guide-channel-row {
+  display: flex;
+  align-items: stretch;
+  min-height: var(--guide-row-min-height, 56px);
+  background: var(--guide-row-bg, transparent);
+  border-bottom: var(--guide-row-border-bottom, 1px solid var(--surface-border, rgba(255, 255, 255, 0.04)));
+  position: relative;
+  transition: var(--guide-row-transition, none);
+}
+
+.guide-channel-row.has-playlist-name {
+  min-height: var(--guide-row-playlist-min-height, 76px);
+}
+
+.guide-channel-row.has-playlist-name .guide-channel-info {
+  padding-bottom: var(--guide-row-playlist-info-padding-bottom, 26px); /* Shift content up to clear metadata badge vertically */
+}
+
+.guide-channel-row.has-bitrate-badge {
+  min-height: var(--guide-row-bitrate-min-height, 70px);
+}
+
+.guide-channel-row.has-bitrate-badge .guide-channel-info {
+  padding-bottom: var(--guide-row-bitrate-info-padding-bottom, 22px);
+}
+
+.guide-channel-row.has-playlist-name.has-bitrate-badge {
+  min-height: var(--guide-row-playlist-bitrate-min-height, 88px);
+}
+
+.guide-channel-row.has-playlist-name.has-bitrate-badge .guide-channel-info {
+  padding-bottom: var(--guide-row-playlist-bitrate-info-padding-bottom, 30px);
+}
+
+/* Soft gradient divider under each row (v3 via tokens; hidden otherwise) */
+.guide-channel-row::after {
+  content: var(--guide-row-divider-content, none);
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background: var(--guide-row-divider-bg, none);
+  pointer-events: none;
+}
+
+.guide-channel-row:hover,
+.guide-channel-row.hovered {
+  background: var(--guide-row-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.03)));
+}
+
+/* Currently playing channel highlight (v2/v3 accent tint + glow bar via tokens) */
+.guide-channel-row.currently-playing {
+  background: var(--guide-row-current-bg, var(--surface-hover, rgba(255, 255, 255, 0.03)));
+}
+
+.guide-channel-row.currently-playing:hover {
+  background: var(--guide-row-current-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.03)));
+}
+
+.guide-channel-row.currently-playing .guide-channel-name {
+  color: var(--guide-row-current-name-color, var(--text-secondary, rgba(255, 255, 255, 0.9)));
+  text-shadow: var(--guide-row-current-name-shadow, none);
+}
+
+.guide-channel-row.currently-playing:hover .guide-channel-name {
+  color: var(--guide-row-current-name-hover-color, inherit);
+}
+
+
+/* Left accent glow bar on the currently playing channel (v2/v3 via tokens) */
+.guide-channel-row.currently-playing::before {
+  content: var(--guide-row-current-bar-content, none);
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: var(--guide-row-current-bar-bg, none);
+  border-radius: 0 3px 3px 0;
+  box-shadow: var(--guide-row-current-bar-shadow, none);
+  animation: var(--guide-row-current-bar-anim, none);
+  pointer-events: none;
+}
+
+.guide-channel-row.currently-playing .guide-channel-info {
+  background: var(--guide-info-current-bg, var(--surface-hover, rgba(255, 255, 255, 0.05)));
+}
+
+/* Highlight border around currently playing channel when epg-highlight-border-current is enabled on document */
+html.epg-highlight-border-current .guide-channel-row.currently-playing::after {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: auto !important;
+  background: transparent !important;
+  border: 2px solid var(--accent-primary, #00d4ff) !important;
+  border-radius: 4px !important;
+  pointer-events: none !important;
+  z-index: 10 !important;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent) !important;
+}
+
+/* Channel Info (left side) */
+.guide-channel-info {
+  display: flex;
+  align-items: center;
+  gap: var(--guide-info-gap, 12px);
+  padding: var(--guide-info-padding, 8px 16px);
+  background: var(--guide-info-bg, transparent);
+  border-right: var(--guide-info-border-right, var(--glass-border, 1px solid rgba(255, 255, 255, 0.06)));
+  cursor: pointer;
+  transition: var(--guide-info-transition, background 0.15s ease);
+  flex-shrink: 0;
+  box-sizing: border-box;
+  /* Critical for matching header width */
+  position: relative;
+}
+
+.guide-channel-info:hover {
+  background: var(--guide-info-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.05)));
+}
+
+.guide-channel-info:active {
+  background: var(--surface-glow, rgba(0, 212, 255, 0.1));
+}
+
+/* Remove horizontal padding on favorite star so it hugs the left edge and logo */
+.guide-channel-info .favorite-btn {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Recording indicator at top right of channel box */
+.channel-recording-indicator {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  z-index: 5;
+}
+
+/* Metadata badge container at bottom right of channel box */
+.channel-row-metadata {
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+}
+
+/* Detailed badge styling to match preview panel */
+.channel-row-metadata .metadata-badge.detailed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.6);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+}
+
+.channel-row-metadata .metadata-badge.detailed.two-line {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.channel-row-metadata .metadata-badge.detailed .metadata-badge-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.channel-row-metadata .metadata-badge.detailed .quality {
+  color: var(--accent-primary, #00d4ff);
+  font-weight: 700;
+}
+
+.channel-row-metadata .metadata-badge.detailed .fps {
+  color: #ff9500;
+}
+
+.channel-row-metadata .metadata-badge.detailed .audio {
+  color: #50e3c2;
+}
+
+.channel-row-metadata .metadata-badge.detailed .bitrate {
+  color: #a78bfa;
+}
+
+.channel-row-metadata .metadata-badge.detailed .audio-bitrate {
+  color: #38bdf8;
+}
+
+.channel-row-metadata .metadata-badge.detailed .bitrate-sep {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 8px;
+}
+
+.guide-channel-number {
+  font-size: 0.75rem;
+  color: var(--guide-num-color, var(--text-muted, rgba(255, 255, 255, 0.35)));
+  min-width: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  text-shadow: var(--guide-text-shadow, none);
+}
+
+.guide-channel-logo {
+  width: var(--channel-logo-size, 42px);
+  height: var(--channel-logo-size, 42px);
+  border-radius: var(--guide-logo-radius, var(--channel-logo-radius, 6px));
+  overflow: hidden;
+  background: var(--guide-logo-bg, rgba(255, 255, 255, 0.08));
+  border: var(--guide-logo-border, none);
+  box-shadow: var(--guide-logo-shadow, none);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html.logo-padded-tiles .guide-channel-logo,
+.logo-padded-tiles .guide-channel-logo {
+  padding: 3px !important;
+}
+
+.guide-channel-logo.logo-on-light {
+  background: var(--guide-logo-onlight-bg, rgba(255, 255, 255, 0.9));
+}
+
+.guide-channel-logo.logo-on-light .logo-placeholder {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+.guide-channel-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-placeholder {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
+}
+
+/* Rectangle (horizontal) channel logos when epg-rectangle-logos is enabled on document or logo-shape-rectangle class is present */
+html.epg-rectangle-logos .guide-channel-logo,
+.guide-channel-logo.logo-shape-rectangle {
+  width: var(--guide-logo-rect-w, calc(var(--channel-logo-size, 42px) * 1.833));
+  height: var(--guide-logo-rect-h, calc(var(--channel-logo-size, 42px) * 0.888));
+  border-radius: var(--guide-logo-rect-radius, var(--channel-logo-radius, 4px));
+  padding: 0;
+  background: var(--guide-logo-rect-bg, transparent);
+}
+html.epg-rectangle-logos .guide-channel-logo.logo-on-light,
+.guide-channel-logo.logo-shape-rectangle.logo-on-light {
+  background: var(--guide-logo-onlight-bg, rgba(255, 255, 255, 0.9));
+}
+
+/* Per-source square override when the global setting is rectangle - must beat the same specificity above */
+html.epg-rectangle-logos .guide-channel-logo.logo-shape-square {
+  width: var(--channel-logo-size, 42px);
+  height: var(--channel-logo-size, 42px);
+  border-radius: var(--guide-logo-square-radius, var(--channel-logo-radius, 4px));
+  padding: 0;
+  background: var(--guide-logo-square-bg, rgba(255, 255, 255, 0.08));
+}
+html.epg-rectangle-logos .guide-channel-logo.logo-shape-square.logo-on-light {
+  background: var(--guide-logo-onlight-bg, rgba(255, 255, 255, 0.9));
+}
+
+/* Sharp edge override when round edges is disabled */
+html.logo-sharp-edges .guide-channel-logo,
+.logo-sharp-edges .guide-channel-logo {
+  border-radius: 0px !important;
+}
+
+/* No-padding overrides for standard & rectangle logos */
+.guide-channel-logo.no-padding,
+html.epg-rectangle-logos .guide-channel-logo.no-padding {
+  padding: 0 !important;
+}
+
+.guide-channel-logo.no-padding img,
+html.epg-rectangle-logos .guide-channel-logo.no-padding img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+/* Smart trim: auto-crop baked-in transparent padding so opaque content fills the tile */
+.guide-channel-logo.logo-smart-trim {
+  position: relative !important;
+}
+.guide-channel-logo.logo-smart-trim img {
+  position: absolute !important;
+  left: var(--smart-trim-x) !important;
+  top: var(--smart-trim-y) !important;
+  width: var(--smart-trim-w) !important;
+  height: var(--smart-trim-h) !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: fill !important;
+}
+html.epg-rectangle-logos .logo-placeholder {
+  font-size: 0.8rem;
+  width: 66px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Marquee effect on hover — gradient fade on right edge of channel name */
+.guide-channel-name-container {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, black 85%, transparent 100%);
+}
+
+.guide-channel-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: var(--channel-font-size, 14px);
+  font-weight: var(--guide-name-weight, inherit);
+  color: var(--guide-name-color, var(--text-secondary, rgba(255, 255, 255, 0.9)));
+  text-shadow: var(--guide-text-shadow, none);
+}
+
+.epg-bold-channel-names .guide-channel-name {
+  font-weight: 700 !important;
+}
+
+.guide-channel-info:hover .guide-channel-name {
+  /* Only animate if we want a scrolling effect. */
+  overflow: visible;
+  display: inline-block;
+  animation: scroll-text 8s linear infinite;
+  padding-right: 20px;
+}
+
+/* Hovered channel names brighten to full white (v3 dark via --guide-* tokens) */
+.guide-channel-info:hover .guide-channel-name,
+.guide-channel-row:hover .guide-channel-name {
+  color: var(--guide-name-hover-color, inherit);
+}
+
+
+@keyframes scroll-text {
+  0% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(0);
+  }
+
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.guide-channel-playlist-name {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--guide-playlist-color, var(--text-muted, rgba(255, 255, 255, 0.45)));
+  line-height: 1.4;
+  margin-top: 2px;
+  padding-right: 12px; /* Cleared large padding since badge is now vertically separated */
+  text-shadow: var(--guide-text-shadow, none);
+}
+
+.guide-manage-channels-btn.active-toggle {
+  background: rgba(0, 212, 255, 0.2);
+  border-color: rgba(0, 212, 255, 0.5);
+}
+
+/* Program Grid (EPG area) */
+.guide-program-grid {
+  position: relative;
+  align-self: stretch;
+  min-height: 48px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* EPG optimization toggles live with the base EPG styles so they win regardless
+   of theme CSS ordering. */
+html.epg-reduce-gpu-layers .guide-channel-row {
+  will-change: auto !important;
+  contain: layout style !important;
+}
+
+html.epg-reduce-gpu-layers .guide-program-grid {
+  contain: layout style !important;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 56px;
+}
+
+html.epg-disable-channel-fade .guide-channel-name-container {
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+}
+
+html.epg-disable-channel-fade .guide-channels {
+  scroll-behavior: auto !important;
+}
+
+/* Empty State */
+.guide-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.guide-empty-icon {
+  color: var(--text-muted, rgba(255, 255, 255, 0.2));
+  margin-bottom: 24px;
+}
+
+.guide-empty h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.guide-empty p {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+}
+
+.guide-empty .hint {
+  margin-top: 16px;
+  font-size: 0.8rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
+}
+
+/* Search Results Styles */
+.guide-search-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent-primary, #00d4ff);
+  margin-right: 8px;
+}
+
+.guide-search-query {
+  font-size: 0.9rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.6));
+  font-style: italic;
+}
+
+/* "Searching…" status shown in the header while search results load */
+.guide-search-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-style: italic;
+  color: var(--text-muted, rgba(255, 255, 255, 0.55));
+  white-space: nowrap;
+}
+
+.guide-search-status .sync-spinner {
+  display: inline-block;
+  animation: var(--guide-spinner-anim, spin 1s linear infinite);
+  font-size: 0.9em;
+}
+
+/* Scroll to Top button (Nuvio-style) for the virtualized search results.
+   Anchored to the bottom-right of the results area; appears once the active
+   tab's scroller is scrolled down. */
+.guide-scroll-top {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(8, 8, 12, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 99;
+  opacity: 0;
+  transform: translateY(12px) scale(0.9);
+  pointer-events: none;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              color 0.2s ease;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.guide-scroll-top.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.guide-scroll-top svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease;
+}
+
+.guide-scroll-top:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 65%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 85%, transparent);
+  color: #ffffff;
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 20px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+}
+
+.guide-scroll-top:hover svg {
+  transform: translateY(-2px);
+}
+
+.guide-scroll-top:active {
+  transform: translateY(0) scale(0.95);
+}
+
+.guide-search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+}
+
+.search-section {
+  margin-bottom: 24px;
+}
+
+/* Search mode: the active tab's Virtuoso is the scroller, so the results
+   container must not scroll itself or add padding around the list. The
+   Channels tab is flush with the time header above it; EPG card tabs apply
+   their own padding. */
+.guide-search-results:has(.search-channels-section),
+.guide-search-results:has(.search-programs-section) {
+  overflow: hidden;
+  padding: 0;
+}
+
+/* Channels tab wrapper - fills the container, flush with the time header */
+.search-channels-section {
+  height: 100%;
+  margin-bottom: 0;
+}
+
+/* Timeline wrapper for channel search matches (anchors the now-indicator) */
+.search-channels-timeline {
+  position: relative;
+  height: 100%;
+}
+
+/* EPG card tabs - keep the card padding around the virtualized list */
+.search-programs-section {
+  height: 100%;
+  margin-bottom: 0;
+  padding: 16px 24px;
+  box-sizing: border-box;
+}
+
+/* The virtualized list inside search tabs fills its container and scrolls itself.
+   overflow-x: hidden matches .guide-channels so the EPG timeline never shows a
+   horizontal scrollbar (program blocks past the right edge are clipped). */
+.search-virtuoso {
+  height: 100%;
+  overflow-x: hidden;
+}
+
+/* Search result tabs (single-select) - now live inline in the guide header,
+   after the results count, so the time grid / now-line never crosses them */
+.guide-search-tabs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.search-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.search-tab:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.search-tab.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 55%, transparent);
+  color: var(--accent-primary, #00d4ff);
+}
+
+.search-tab .live-dot,
+.search-tab .search-tab-icon {
+  flex-shrink: 0;
+}
+
+.search-tab-count {
+  font-weight: 500;
+  opacity: 0.75;
+}
+
+.search-section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  margin: 0 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+.search-results-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.search-result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-result-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.search-result-item.selected {
+  background: var(--accent-glow, rgba(0, 212, 255, 0.15));
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+}
+
+.search-result-item.program.now {
+  background: rgba(255, 59, 48, 0.1);
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.search-result-channel-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.search-result-channel-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.search-result-channel-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-result-channel-name {
+  font-size: var(--channel-font-size, 14px);
+  font-weight: 500;
+  color: white;
+}
+
+.search-result-channel-meta {
+  font-size: calc(var(--channel-font-size, 14px) * 0.85);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-result-program-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.search-result-program-title {
+  font-size: var(--channel-font-size, 14px);
+  font-weight: 500;
+  color: white;
+}
+
+.search-result-program-time {
+  font-size: calc(var(--channel-font-size, 14px) * 0.85);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-badge {
+  background: rgba(255, 59, 48, 0.8);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.search-result-program-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.4;
+}
+
+.search-result-play-btn {
+  padding: 6px 12px;
+  background: var(--accent-glow, rgba(0, 212, 255, 0.15));
+  border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+  color: var(--accent-primary, #00d4ff);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.search-result-play-btn:hover {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
+}
+
+/* New Search Results Guide-Style Layout */
+.search-result-row {
+  margin-bottom: 1px;
+}
+
+.search-result-row .guide-channel-info {
+  cursor: pointer;
+}
+
+.search-result-row .guide-channel-info:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.search-result-row .guide-channel-info.with-source {
+  padding-bottom: 28px;
+}
+
+.search-result-row.selected .guide-channel-info {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent);
+}
+
+.search-program-block {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.search-program-block:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.search-program-block.current {
+  background: rgba(255, 59, 48, 0.15);
+  border-color: rgba(255, 59, 48, 0.4);
+}
+
+.search-program-block.highlighted {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+}
+
+.search-program-block.highlighted.current {
+  background: rgba(255, 59, 48, 0.25);
+  border-color: rgba(255, 59, 48, 0.6);
+  box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.2);
+}
+
+.search-program-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.search-program-title {
+  font-size: calc(var(--channel-font-size, 14px) * 0.9);
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search-program-time {
+  font-size: calc(var(--channel-font-size, 14px) * 0.8);
+  color: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-indicator {
+  background: rgba(255, 59, 48, 0.9);
+  color: white;
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.search-match-badge {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  background: rgba(0, 212, 255, 0.9);
+  color: white;
+  font-size: 0.55rem;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.search-empty-programs {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* Search programs container with fixed program slots */
+.search-programs-container {
+  flex: 1;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  min-height: 76px;
+}
+
+/* Horizontal scrollbar styling to match vertical guide scrollbar */
+.search-programs-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.search-programs-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.search-programs-container::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, transparent);
+  border-radius: 3px;
+}
+
+.search-programs-container::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, #00d4ff));
+}
+
+.search-program-slot {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding: 8px 10px 10px 10px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.015) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 72px;
+  box-sizing: border-box;
+  overflow: hidden;
+  justify-content: space-between;
+}
+
+.search-program-slot:hover {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.09) 0%, rgba(255, 255, 255, 0.03) 100%);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.search-program-slot.live {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.14) 0%, rgba(239, 68, 68, 0.03) 100%);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.search-program-slot.live:hover {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.22) 0%, rgba(239, 68, 68, 0.06) 100%);
+  border-color: rgba(239, 68, 68, 0.55);
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.18), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.search-program-slot.future {
+  background: linear-gradient(145deg, rgba(0, 212, 255, 0.07) 0%, rgba(0, 212, 255, 0.015) 100%);
+  border-color: rgba(0, 212, 255, 0.18);
+}
+
+.search-program-slot.future:hover {
+  background: linear-gradient(145deg, rgba(0, 212, 255, 0.12) 0%, rgba(0, 212, 255, 0.03) 100%);
+  border-color: rgba(0, 212, 255, 0.42);
+  box-shadow: 0 4px 16px rgba(0, 212, 255, 0.14), 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.search-program-slot.past {
+  opacity: 0.55;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Recording indicator for search results */
+.search-program-slot.is-recording {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.18) 0%, rgba(239, 68, 68, 0.05) 100%);
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+.search-program-slot.is-recording:hover {
+  background: linear-gradient(145deg, rgba(239, 68, 68, 0.24) 0%, rgba(239, 68, 68, 0.08) 100%);
+  border-color: rgba(239, 68, 68, 0.7);
+}
+
+.search-program-slot.is-scheduled {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.search-program-slot.is-scheduled:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* Card Header */
+.search-program-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.search-program-badge {
+  display: inline-flex;
+  align-items: center;
+}
+
+.search-program-duration {
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+.search-program-slot.live .search-program-duration {
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.search-program-slot.future .search-program-duration {
+  color: rgba(0, 212, 255, 0.8);
+}
+
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.22);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #ff6b6b;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.2;
+}
+
+.live-dot-pulse {
+  width: 5px;
+  height: 5px;
+  background: #ff4d4d;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #ff4d4d;
+  animation: pulse-live 1.6s infinite ease-in-out;
+}
+
+@keyframes pulse-live {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.75);
+  }
+}
+
+.future-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 212, 255, 0.12);
+  border: 1px solid rgba(0, 212, 255, 0.28);
+  color: var(--accent-primary, #00d4ff);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.past-badge {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #ff6b6b;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1.5px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.rec-dot {
+  width: 5px;
+  height: 5px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse-live 1.2s infinite;
+}
+
+.sched-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 1.5px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Card Body */
+.search-program-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 3px 0 5px 0;
+  min-width: 0;
+}
+
+.search-program-title {
+  font-size: calc(var(--channel-font-size, 14px) * 0.92);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.search-program-subtitle {
+  font-size: calc(var(--channel-font-size, 14px) * 0.78);
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+/* Card Footer */
+.search-program-footer {
+  margin-top: auto;
+}
+
+.search-program-datetime {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: calc(var(--channel-font-size, 14px) * 0.75);
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.search-program-clock-icon {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.search-program-date-label {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.search-program-time-sep {
+  opacity: 0.4;
+}
+
+.search-program-time-range {
+  color: rgba(255, 255, 255, 0.6);
+  font-variant-numeric: tabular-nums;
+}
+
+.search-program-slot.live .search-program-time-range {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Live progress bar */
+.search-program-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.search-program-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+  border-radius: 0 2px 2px 0;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+/* Search live section */
+.search-live-section {
+  margin-bottom: 16px;
+}
+
+.search-other-section {
+  margin-top: 16px;
+}
+
+.search-section-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(var(--category-font-size, 13px) * 0.9);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(255, 59, 48, 0.9);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Search section title styling */
+.search-section-title {
+  font-size: calc(var(--category-font-size, 13px) * 0.85);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.6);
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin: 0;
+}
+
+/* Watchlist Actions */
+.watchlist-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--panel-bg);
+}
+
+.watchlist-btn-edit,
+.watchlist-btn-delete {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.watchlist-btn-edit:hover {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--accent-primary, #00d4ff);
+}
+
+.watchlist-btn-delete:hover {
+  background: rgba(255, 59, 48, 0.2);
+  color: rgba(255, 59, 48, 0.9);
+}
+
+.watchlist-btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Program Badges */
+.program-badges {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.badge {
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.badge.reminder {
+  background: rgba(255, 204, 0, 0.2);
+}
+
+.badge.autoswitch {
+  background: rgba(0, 212, 255, 0.2);
+}
+
+/* Live indicator for watchlist */
+.live-indicator {
+  color: #ff3b30;
+  margin-right: 6px;
+  font-size: 0.8em;
+}
+
+/* ==========================================================================
+   NON-GLASS THEME GRADIENT FIX
+   Since LiveTV forces the .app container to be transparent (to show video),
+   solid themes with global gradients (like solid-berry) lose their background.
+   We explicitly attach the viewport-fixed gradient under these panels, while
+   tinting them with their default overlay colors for contrast.
+   ========================================================================== */
+[data-theme]:not([data-theme*="glass-"]) .guide-info-pane,
+[data-theme]:not([data-theme*="glass-"]) .guide-grid-section,
+[data-theme]:not([data-theme*="glass-"]) .guide-header {
+  background: var(--glass-surface-bg, var(--bg-primary, #1e1e1e));
+  background-attachment: var(--glass-surface-bg-attachment, fixed);
+}
+
+/* ==========================================================================
+   VIDEO PREVIEW RESIZER
+   ========================================================================== */
+.guide-preview-resizer {
+  position: absolute;
+  bottom: -12px;
+  right: -12px;
+  width: var(--resizer-size, 24px);
+  height: var(--resizer-size, 24px);
+  cursor: nwse-resize;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.guide-preview-resizer.vertical {
+  width: var(--resizer-v-width, 40px);
+  height: var(--resizer-v-height, 16px);
+  bottom: var(--resizer-v-bottom, -8px);
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: ns-resize;
+}
+
+.resizer-dot {
+  width: var(--resizer-dot-size, 8px);
+  height: var(--resizer-dot-size, 8px);
+  border-radius: 50%;
+  background: var(--resizer-dot-bg, var(--surface-border, rgba(255, 255, 255, 0.4)));
+  box-shadow: var(--resizer-dot-shadow, 0 0 4px rgba(0, 0, 0, 0.5));
+  transition: var(--resizer-dot-transition, all 0.2s ease);
+}
+
+.guide-preview-resizer.vertical .resizer-dot {
+  width: var(--resizer-dot-v-width, 32px);
+  height: var(--resizer-dot-v-height, 6px);
+  border-radius: var(--resizer-dot-v-radius, 3px);
+}
+
+.guide-preview-resizer:hover .resizer-dot {
+  background: var(--accent-primary, #00d4ff);
+  transform: var(--resizer-dot-hover-transform, scale(1.3));
+  box-shadow: var(--resizer-dot-hover-shadow, 0 0 8px var(--accent-primary, #00d4ff));
+}
+
+.guide-preview-resizer.vertical:hover .resizer-dot {
+  transform: var(--resizer-dot-v-hover-transform, scaleY(1.3));
+}
+
+.guide-preview-resizer:active .resizer-dot {
+  transform: var(--resizer-dot-active-transform, scale(0.9));
+  background: white;
+  box-shadow: var(--resizer-dot-active-shadow, none);
+}
+
+.guide-preview-resizer.vertical:active .resizer-dot {
+  transform: var(--resizer-dot-v-active-transform, scaleY(0.9));
+}
+
+/* EPG On-Demand Sync Status Indicator */
+.guide-epg-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  font-size: 13px;
+  color: var(--accent, #3b82f6);
+  font-weight: 500;
+}
+
+.guide-epg-sync-status .sync-spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+/* ==========================================================================
+   RESPONSIVE SCALING FOR HIGH-DPI / SMALL VIEWPORTS
+   ========================================================================== */
+@media (max-height: 750px), (max-width: 1200px) {
+  /* Header */
+  .guide-header {
+    padding: 6px 16px;
+  }
+  .guide-current-time {
+    font-size: 1.1rem;
+  }
+  .guide-category {
+    font-size: 0.85rem;
+  }
+  .guide-channel-count {
+    font-size: 0.75rem;
+  }
+  .guide-manage-channels-btn,
+  .guide-refresh-source-btn,
+  .guide-epg-shift-btn,
+  .guide-now-btn {
+    padding: 2px 8px;
+    font-size: 0.68rem;
+    gap: 4px;
+  }
+
+  /* Info Pane Details */
+  .guide-info-pane {
+    padding: 16px 20px;
+  }
+  .guide-program-title {
+    font-size: var(--epg-title-font-size, 20px);
+    margin-bottom: 4px;
+  }
+  .guide-program-meta {
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    gap: 10px;
+  }
+  .guide-program-description {
+    font-size: var(--epg-body-font-size, 13px);
+    line-height: 1.4;
+  }
+
+  /* Grid Layout and rows */
+  .guide-channel-row {
+    min-height: 44px;
+  }
+  .guide-time-header {
+    height: 26px;
+  }
+  .guide-time-header .guide-current-time-indicator::before {
+    border-top-width: 6px;
+    top: -2px;
+  }
+  .guide-time-marker {
+    font-size: 0.7rem;
+    padding-left: 6px;
+  }
+
+  /* Channel details in EPG grid rows */
+  .guide-channel-info {
+    padding: 4px 10px;
+    gap: 8px;
+  }
+  .guide-channel-logo {
+    width: 24px !important;
+    height: 24px !important;
+    padding: 2px !important;
+  }
+  html.epg-rectangle-logos .guide-channel-logo {
+    width: 42px !important;
+    height: 22px !important;
+    padding: 1px 4px !important;
+  }
+  html.epg-rectangle-logos .logo-placeholder {
+    width: 42px !important;
+    height: 22px !important;
+  }
+  .logo-placeholder {
+    font-size: 0.75rem !important;
+    width: 24px !important;
+    height: 24px !important;
+    line-height: 24px !important;
+  }
+  .guide-channel-name {
+    font-size: var(--channel-font-size, 0.8rem);
+  }
+  .guide-channel-number {
+    font-size: 0.7rem !important;
+  }
+  .channel-recording-indicator {
+    width: 6px;
+    height: 6px;
+  }
+
+  /* Program Block cell details */
+  .program-block {
+    top: 2px;
+    bottom: 2px;
+    padding: 2px 8px;
+  }
+  .program-block-title {
+    font-size: var(--prog-title-font-size, 0.75rem);
+  }
+  .program-block-desc {
+    font-size: var(--prog-desc-font-size, 0.65rem);
+    margin-top: 1px;
+  }
+}
+
+/* Transparent Guide Mode (Z key) — hides preview, overlays EPG grid on video
+   High-specificity selectors with !important to override all theme overrides
+   including [data-theme]:not([data-theme*="glass-"]) rules.                  */
+[data-theme] .guide-panel.guide-transparent-mode .guide-grid-section {
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  height: var(--transparent-guide-height, 40%) !important;
+  background: rgba(0, 0, 0, var(--transparent-guide-overlay-opacity, 0.55)) !important;
+  background-attachment: initial !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  /* Inherits flex column layout from base rule */
+}
+
+[data-theme] .guide-panel.guide-transparent-mode.with-categories .guide-grid-section {
+  left: var(--category-strip-content-width, 240px) !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-header {
+  background: transparent !important;
+  background-attachment: initial !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-time-header {
+  background: transparent !important;
+  background-attachment: initial !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  position: relative;
+}
+
+.guide-transparent-close-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 50%;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.guide-transparent-close-btn:hover {
+  background: rgba(220, 53, 69, 0.9) !important;
+  border-color: rgba(220, 53, 69, 1) !important;
+  color: #ffffff !important;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 0 10px rgba(220, 53, 69, 0.6);
+}
+
+/* When the top header is visible its own ✕ already closes the guide, so hide
+   the duplicate ✕ in the time bar (the transparent-guide-hide-header class is
+   toggled on <html> only when the header is hidden). When the header is hidden
+   this button remains the only close affordance and stays visible. */
+html:not(.transparent-guide-hide-header) .guide-transparent-close-btn {
+  display: none !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-channel-row {
+  background: transparent !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-channel-row:hover,
+[data-theme] .guide-panel.guide-transparent-mode .guide-channel-row.hovered {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-channel-row.currently-playing {
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-channel-info {
+  background: transparent !important;
+}
+
+[data-theme] .guide-panel.guide-transparent-mode .guide-channel-row.currently-playing .guide-channel-info {
+  background: rgba(255, 255, 255, 0.04) !important;
+}
+
+/* Hide guide header row in transparent mode when setting is enabled */
+.transparent-guide-hide-header .guide-panel.guide-transparent-mode .guide-header,
+.transparent-guide-hide-header .guide-panel.guide-transparent-mode .guide-header {
+  display: none !important;
+}
+
+/* Categories sidebar — fully transparent in transparent guide mode
+   Uses html + data-theme + :has() to beat [data-theme]:not(...) specificity */
+html[data-theme]:has(.guide-transparent-mode) .category-strip {
+  background: rgba(0, 0, 0, var(--transparent-guide-sidebar-opacity, 0)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-right: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+/* EPG Transparent Overlay Resizer Handle */
+.guide-transparent-resizer {
+  position: absolute;
+  top: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.guide-transparent-resizer::after {
+  content: '';
+  width: 32px;
+  height: 3px;
+  background: var(--surface-border, rgba(255, 255, 255, 0.25));
+  border-radius: 2px;
+  transition: all 0.2s ease;
+}
+
+.guide-transparent-resizer:hover::after {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
+  width: 48px;
+}
+
+/* Multiview Slot Buttons in the Bottom Right Corner */
+.multiview-slots-container {
+  position: absolute;
+  bottom: 6px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+  align-items: center;
+}
+
+.multiview-slot-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.multiview-slot-btn:hover:not(:disabled) {
+  background: rgba(0, 212, 255, 0.3);
+  border-color: rgba(0, 212, 255, 0.5);
+  color: white;
+}
+
+.multiview-slot-btn:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.multiview-slot-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* No EPG row height or padding adjustments needed since buttons align to bottom-right corner */
+
+/* Quality badges default state when multiview is active */
+.guide-channel-row.has-multiview-buttons .channel-row-metadata {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  opacity: 1;
+}
+
+/* On hover — hide badges, reveal multiview buttons */
+.guide-channel-row.has-multiview-buttons:hover .channel-row-metadata {
+  opacity: 0 !important;
+  transform: translateY(-4px);
+  pointer-events: none;
+}
+
+.guide-channel-row.has-multiview-buttons:hover .multiview-slots-container {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Guide Multiview EPG Grid / Split Previews */
+.guide-top-section.multiview-grid-active {
+  aspect-ratio: 64 / 9; /* 1x4 horizontal layout ratio */
+  margin-bottom: 16px; /* Spacing from EPG grid controls */
+}
+
+.guide-preview-line-1x4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr); /* 4 horizontal columns in 1 row */
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+  box-sizing: border-box;
+  flex: 1;
+}
+
+/* Multiview grid inside the 3-column view: the video cells render as a grid
+   ABOVE the schedule pane (.guide-info-pane), which stays visible. 4-view
+   layouts (2x2, bigbottom) get a proper 2x2 grid; 2-view layouts (sbs, pip)
+   get a side-by-side pair. Cells reuse .guide-preview-grid-cell styling. */
+.guide-panel.alt-view-active .guide-multiview-3col {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  flex: none;
+}
+
+.guide-panel.alt-view-active .guide-multiview-3col.four-up {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  aspect-ratio: 16 / 9;
+  max-height: 52vh;
+}
+
+.guide-panel.alt-view-active .guide-multiview-3col.two-up {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
+  aspect-ratio: 32 / 9;
+  max-height: 40vh;
+}
+
+/* 16:9 cutouts: multiview cells never stretch to their track's shape. Height
+   drives the box (height:100%), width derives from aspect-ratio and is capped
+   by the track width, so a wide/short track yields a centered 16:9 cell with
+   the pane background around it instead of a horizontally-stretched video. */
+.guide-preview-line-1x4 .guide-preview-grid-cell,
+.guide-multiview-3col .guide-preview-grid-cell {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 16 / 9;
+  justify-self: center;
+  align-self: center;
+}
+
+.guide-preview-grid-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 6px;
+  border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.08));
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.guide-preview-split-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  flex: 1 !important; /* Force it to grow and fill the flex container height */
+  overflow: hidden;
+  border: none !important;
+  border-radius: 0 !important;
+  background: #000;
+}
+
+.guide-preview-grid-cell .hls-cell-container,
+.guide-preview-split-cell .hls-cell-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure the HLS video covers the entire container without letterboxing */
+.guide-preview-grid-cell .hls-cell-video,
+.guide-preview-split-cell .hls-cell-video {
+  object-fit: cover !important;
+}
+
+.guide-info-pane.multiview-split-active {
+  padding: 0 !important; /* Remove padding entirely to allow border-to-border fill */
+  overflow: hidden;
+  display: flex !important; /* Keep display flex to allow flex-grow */
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: stretch !important;
+}
+
+/* Hide the vertical centering pseudo-elements when split player is active */
+.guide-info-pane.multiview-split-active::before,
+.guide-info-pane.multiview-split-active::after {
+  display: none !important;
+}
+
+/* V3 Theme specific overrides for split preview */
+.modern-ui-v3 .guide-info-pane.multiview-split-active {
+  padding: 0 !important;
+  overflow: hidden !important;
+  margin-left: 8px !important;
+  margin-bottom: 0 !important;
+  border-radius: var(--guide-preview-radius, 12px) !important;
+}
+
+.modern-ui-v3 .guide-preview-split-cell {
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+/* V3 Theme style for 1x4 preview row cards */
+.modern-ui-v3 .guide-preview-grid-cell {
+  border-radius: 12px !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 4px 16px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Reset margins, paddings, and borders on the main player preview inside cell 1 */
+.guide-preview-grid-cell .guide-preview-pane,
+.guide-preview-grid-cell .guide-preview-video,
+.modern-ui .guide-preview-grid-cell .guide-preview-pane,
+.modern-ui .guide-preview-grid-cell .guide-preview-video,
+.modern-ui-v3 .guide-preview-grid-cell .guide-preview-pane,
+.modern-ui-v3 .guide-preview-grid-cell .guide-preview-video {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Force slot 1 container background to be transparent in all themes to prevent overlay darkening on Player 1 */
+#epg-slot-container-1,
+.modern-ui #epg-slot-container-1,
+.modern-ui-v3 #epg-slot-container-1 {
+  background: transparent !important;
+}
+
+/* ==========================================================================
+   3-COLUMN EPG VIEW
+   The guide panel becomes a horizontal split: the channel list is a narrow
+   vertical strip on the left (the grid section, minus the time grid), and the
+   preview pane + live info header + program schedule sit on the right (the
+   top section, stacked). Every surface keeps the same backgrounds/opacity the
+   traditional view uses, so the compositing path is identical (opaque
+   surfaces, single transparent video hole). No translucent regions are
+   introduced that would force the compositor to blend over the native video
+   window.
+   ========================================================================== */
+.guide-panel.alt-view-active {
+  flex-direction: row;
+}
+
+/* Left: channel strip (the grid section; the horizontal program cells are
+   replaced by the row-level current-program line via ChannelRow altView). Its
+   width is driven by --epg-channel-column-width so the existing channel-column
+   resizer (dragging the 8px handle) already resizes it. */
+.guide-panel.alt-view-active .guide-grid-section {
+  order: 0;
+  flex: 0 0 var(--epg-channel-column-width, 300px);
+  min-width: 180px;
+  max-width: 640px;
+  border-right: var(--glass-surface-border-right, var(--glass-border, 1px solid rgba(255, 255, 255, 0.08)));
+  border-radius: 0;
+}
+
+/* The resizer handle lives inside the grid section and is positioned at the
+   column-width from its left edge — exactly the strip's right boundary. */
+.guide-panel.alt-view-active .epg-channel-resizer {
+  left: var(--epg-channel-column-width, 300px);
+}
+
+/* v3 floating-card look: round ALL corners of the strip (previously the
+   right corners were flat and flush against the right column, so the right
+   side looked cut off with no border). A gap separates the strip from the
+   right column so the rounded right edge is visible. overflow:hidden on the
+   grid section clips the header/search/list to the rounded corners. */
+.modern-ui-v3 .guide-panel.alt-view-active {
+  gap: 16px;
+}
+.modern-ui-v3 .guide-panel.alt-view-active .guide-grid-section {
+  border-radius: var(--glass-panel-radius, 24px);
+}
+.modern-ui-v3 .guide-panel.alt-view-active .guide-top-section {
+  border-radius: var(--glass-panel-radius, 24px);
+}
+
+/* Right: preview on top, live header + schedule below (the top section
+   already becomes a column via .guide-top-section.alternate-view) */
+.guide-panel.alt-view-active .guide-top-section {
+  order: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+/* No time ruler in the strip view */
+.guide-panel.alt-view-active .guide-time-header {
+  display: none;
+}
+
+/* The previous/now/next navigation only matters for a horizontal time grid —
+   hidden in the strip view. The close (X) button moves to the end of the
+   right-pane toolbar (.guide-alt-toolbar .guide-alt-close), so it's also
+   hidden from the strip header here. */
+.guide-panel.alt-view-active .guide-nav {
+  display: none;
+}
+.guide-panel.alt-view-active .guide-header-right .guide-close {
+  display: none;
+}
+
+/* Transparent 3-column overlay: the strip's ✕ normally lives in the right
+   pane toolbar (.guide-alt-toolbar), which is inside the top section that
+   transparent mode hides; the time-bar ✕ lives in the time header, which
+   alt-view hides. Restore the header ✕ here so the overlay can be closed
+   with the mouse (otherwise only the shortcut key works). */
+.guide-panel.alt-view-active.guide-transparent-mode .guide-header-right .guide-close {
+  display: flex;
+}
+
+/* Hide-header + 3-column: the header (with its restored ✕ above) is removed
+   by the transparent-guide-hide-header setting, so float the close button at
+   the overlay's top-right. The base .guide-transparent-close-btn centers
+   itself in the time header; alt-view overrides that to a plain top-right
+   position. */
+[data-theme] .guide-panel.guide-transparent-mode.alt-view-active .guide-transparent-close-btn.guide-alt-float-close {
+  top: 10px;
+  right: 12px;
+  transform: none;
+  display: flex;
+}
+
+/* 3-column channel strip search row — the time header that hosts the channel
+   search on the timeline views is hidden in the strip view, so render the
+   search box here above the channel list. */
+.guide-alt-channel-search {
+  flex: none;
+  padding: 8px 10px;
+  border-bottom: var(--glass-border, 1px solid rgba(255, 255, 255, 0.08));
+  background: var(--guide-header-bg, var(--surface-color, rgba(20, 20, 20, 0.85)));
+}
+
+/* In the strip view the management buttons (Manage Channels, Refresh Source,
+   EPG shift, Playlist editor, Failover group, Probe) move to a proper
+   horizontal toolbar in the right schedule pane below the preview
+   (.guide-alt-toolbar), so the strip header stays minimal: just the clock and
+   the right cluster (resolution filter, A-Z, popout/embedded, close) in a
+   tighter header bar. The numeric clock is hidden since there's no timeline
+   to anchor to — program times live in the right pane's live header. */
+.guide-panel.alt-view-active .guide-header {
+  padding: 8px 12px;
+}
+.guide-panel.alt-view-active .guide-header-left {
+  gap: 10px;
+  row-gap: 4px;
+}
+.guide-panel.alt-view-active .guide-header-left .guide-current-time {
+  display: none;
+}
+
+/* The current-time indicators span the program cells — hidden with them */
+.guide-panel.alt-view-active .guide-channels .guide-current-time-indicator,
+.guide-panel.alt-view-active .guide-grid-section .guide-current-time-indicator {
+  display: none;
+}
+
+/* ---- Strip rows: number + logo + name + current program line ---- */
+.guide-panel.alt-view-active .guide-channel-row {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The alt row is a single cell: the info column fills the whole row and the
+   program info lives under the name (rendered in the name container). */
+.guide-panel.alt-view-active .guide-channel-info.alt-mode {
+  flex: 1 1 auto;
+  gap: 10px;
+  padding: 6px 12px;
+  border-right: none;
+  min-height: 56px;
+}
+
+/* Favorite toggle (replaces the channel number) in the strip row */
+.guide-panel.alt-view-active .guide-channel-info.alt-mode .favorite-btn {
+  flex-shrink: 0;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Metadata badges as a 3rd line under the channel name + current program in
+   the strip row (shown only when at least one badge is enabled) */
+.guide-panel.alt-view-active .guide-channel-info.alt-mode .guide-channel-alt-metadata {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 2px;
+  min-width: 0;
+}
+
+/* The 3-column row uses the same logo sizing as the timeline grid: the
+   channel-logo-size setting (--channel-logo-size) and the square/rectangle
+   shape classes apply here too, so no width/height override is set. */
+
+/* Channel name is bold in the strip */
+.guide-panel.alt-view-active .guide-channel-info.alt-mode .guide-channel-name {
+  font-weight: 600;
+}
+
+/* Current program line inside the strip row */
+.guide-channel-alt-program-title {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.guide-channel-alt-no-program {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  font-style: italic;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Thin progress bar pinned to the bottom of the strip row */
+.guide-channel-alt-progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--glass-border, rgba(255, 255, 255, 0.1));
+  overflow: hidden;
+  pointer-events: none;
+}
+.guide-channel-alt-progress-fill {
+  height: 100%;
+  background: var(--accent, #3b82f6);
+  transition: width 0.3s ease;
+}
+
+/* Selected/playing row gets a teal-tinted highlight. Kept as a solid color
+   (no blur) so it stays GPU-cheap. */
+.guide-panel.alt-view-active .guide-channel-row.currently-playing .guide-channel-info.alt-mode {
+  background: color-mix(in srgb, var(--accent, #00d4ff) 14%, var(--guide-info-current-bg, var(--surface-hover, rgba(255, 255, 255, 0.05))));
+}
+
+/* ---- Right pane: live info header + program schedule ---- */
+/* The info pane's ::before/::after spacers vertically center its content in
+   the traditional view; the alt right pane manages its own scroll, so drop
+   the spacers and let the pane fill the section. */
+.guide-top-section.alternate-view .guide-info-pane.alt-mode::before,
+.guide-top-section.alternate-view .guide-info-pane.alt-mode::after {
+  display: none;
+}
+/* In 3-column mode the info pane has width:100% (not the absolutely-positioned
+   left/right of the traditional view), so the v3 margin-left:16px would overrun
+   the right edge by 16px and push the border flush against the app window. Reset
+   it so the pane spans the rounded right card edge-to-edge, giving symmetric
+   left/right padding. */
+.guide-top-section.alternate-view .guide-info-pane.alt-mode {
+  overflow: hidden;
+  margin-left: 0;
+}
+.guide-top-section.alternate-view .guide-info-pane.alt-mode > .guide-alt-right-pane {
+  flex: 1;
+}
+
+.guide-alt-right-pane {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 12px;
+}
+
+/* 3-column management toolbar: full labelled buttons in a horizontal row
+   below the preview, above the live header/schedule. Labels are always
+   visible here (unlike the header's hover-expand) since it's a proper
+   toolbar; the row wraps instead of stacking vertically. */
+.guide-alt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  flex: none;
+  background: var(--glass-info-bg, var(--bg-overlay, rgba(0, 0, 0, 0.95)));
+  border: var(--glass-surface-border, none);
+  border-radius: var(--glass-surface-radius, 8px);
+  box-shadow: var(--glass-surface-shadow, none);
+}
+/* Toolbar buttons behave like the timeline header buttons: icon-only by
+   default, label slides in on hover so the row stays compact. The sync-status
+   span below isn't a button and stays fully visible. */
+.guide-alt-toolbar .btn-label {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  transition: max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease, margin 0.2s ease;
+  margin-left: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+.guide-alt-toolbar button:hover .btn-label {
+  max-width: 180px;
+  opacity: 1;
+  margin-left: 6px;
+}
+.guide-alt-toolbar .guide-epg-sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  font-size: 0.75rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+/* Right-edge group of the 3-column toolbar: popout/external mode toggle +
+   close button, kept together and pushed to the right even when the toolbar
+   wraps. */
+.guide-alt-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* The Catch-up Programs toggle and the popout/external mode toggle keep
+   their labels visible at all times (not just on hover) so they're easy to
+   identify. */
+.guide-alt-toolbar .guide-alt-schedule-toggle .btn-label,
+.guide-alt-toolbar .guide-alt-popout .btn-label {
+  max-width: none;
+  opacity: 1;
+  margin-left: 6px;
+}
+
+/* Close button at the end of the 3-column toolbar (moved out of the strip
+   header). Pushed to the right edge of the toolbar row. */
+.guide-alt-toolbar .guide-alt-close {
+  margin-left: auto;
+}
+
+/* 3-column empty state when no channel is selected */
+.guide-alt-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  padding: 12px 14px;
+}
+.guide-alt-empty .guide-program-title {
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  font-style: italic;
+}
+
+/* 3-column LIVE TV header bar */
+.guide-alt-live-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  background: var(--glass-info-bg, var(--bg-overlay, rgba(0, 0, 0, 0.95)));
+  border: var(--glass-surface-border, none);
+  border-radius: var(--glass-surface-radius, 8px);
+  box-shadow: var(--glass-surface-shadow, none);
+}
+
+.guide-alt-live-badge {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: #00c6a2;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.guide-alt-live-channel {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.guide-alt-live-program {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.guide-alt-live-times {
+  font-size: 0.75rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  white-space: nowrap;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-alt-live-desc {
+  flex-basis: 100%;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.guide-alt-live-progress {
+  flex-basis: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--glass-border, rgba(255, 255, 255, 0.12));
+  overflow: hidden;
+}
+.guide-alt-live-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--accent, #00d4ff);
+  transition: width 0.3s ease;
+}
+
+/* Catchup: "Show older programs" toggle. Lives in the 3-column toolbar row
+   (below the preview) and matches the toolbar button style: icon-only by
+   default with the label sliding in on hover. */
+.guide-alt-schedule-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  align-self: center;
+  flex: none;
+  padding: var(--guide-btn-padding, 6px 8px);
+  border: var(--guide-btn-border, var(--glass-border, 1px solid rgba(255, 255, 255, 0.2)));
+  border-radius: var(--guide-btn-radius, 6px);
+  background: var(--guide-btn-bg, var(--surface-color, rgba(255, 255, 255, 0.08)));
+  color: var(--guide-btn-color, var(--text-secondary, rgba(255, 255, 255, 0.8)));
+  font-size: var(--guide-btn-font-size, 0.75rem);
+  font-weight: var(--guide-btn-font-weight, 500);
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--guide-btn-transition, all 0.2s ease);
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.guide-alt-schedule-toggle:hover {
+  background: var(--guide-btn-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.15)));
+  border-color: var(--guide-btn-hover-border-color, var(--accent-primary, rgba(255, 255, 255, 0.35)));
+  color: var(--guide-btn-hover-color, var(--text-primary, white));
+  padding: 6px 10px;
+}
+.guide-alt-schedule-toggle.active {
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 18%, transparent);
+  border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 55%, transparent);
+  color: var(--accent-primary, #00d4ff);
+}
+
+/* Program schedule list (3-column style: times + title + description) with a
+   Nuvio-style glowing scrollbar that lights up when hovered */
+.guide-alt-schedule {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-primary, #00d4ff) transparent;
+}
+.guide-alt-schedule::-webkit-scrollbar {
+  width: 6px;
+}
+.guide-alt-schedule::-webkit-scrollbar-track {
+  background: transparent;
+}
+.guide-alt-schedule::-webkit-scrollbar-thumb {
+  background: rgba(0, 212, 255, 0.35);
+  border-radius: 4px;
+  box-shadow: 0 0 6px rgba(0, 212, 255, 0.35);
+}
+.guide-alt-schedule:hover::-webkit-scrollbar-thumb,
+.guide-alt-schedule::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-primary, #00d4ff);
+  box-shadow: 0 0 10px rgba(0, 212, 255, 0.7);
+}
+
+.guide-alt-schedule-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--glass-info-bg, var(--bg-overlay, rgba(0, 0, 0, 0.95)));
+  border: var(--glass-surface-border, none);
+  border-left: 3px solid transparent;
+  border-radius: var(--glass-surface-radius, 6px);
+  color: inherit;
+  font: inherit;
+  cursor: default;
+}
+
+.guide-alt-schedule-row.running {
+  border-left-color: var(--accent, #00d4ff);
+  background: color-mix(in srgb, var(--accent, #00d4ff) 10%, var(--glass-info-bg, var(--bg-overlay, rgba(0, 0, 0, 0.95))));
+}
+
+.guide-alt-schedule-row.clickable {
+  cursor: pointer;
+}
+.guide-alt-schedule-row.clickable:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.05));
+}
+
+.guide-alt-schedule-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-alt-schedule-date {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--accent-primary, #00d4ff);
+  letter-spacing: 0.02em;
+}
+
+.guide-alt-schedule-time {
+  font-size: 0.72rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  font-variant-numeric: tabular-nums;
+}
+
+.guide-alt-schedule-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-alt-schedule-running {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent, #00d4ff);
+  border: 1px solid color-mix(in srgb, var(--accent, #00d4ff) 50%, transparent);
+  border-radius: 3px;
+  padding: 1px 6px;
+  flex-shrink: 0;
+}
+
+.guide-alt-schedule-desc {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.guide-alt-schedule .virtual-list {
+  flex: 1;
+  min-height: 0;
+}
+
+.guide-alt-schedule-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-primary, #00d4ff);
+  padding: 10px 2px 4px;
+}
+
+.guide-alt-schedule-day::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+}
+
+.guide-alt-schedule-empty {
+  font-size: 0.85rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  font-style: italic;
+  padding: 12px 14px;
+}

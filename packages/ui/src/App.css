@@ -1,0 +1,1380 @@
+/* CSS Variables for dynamic theming */
+:root {
+  --channel-font-size: 14px;
+  --category-font-size: 13px;
+  --epg-title-font-size: 32px;
+  --epg-body-font-size: 16px;
+  --app-zoom: 1;
+  --scrollbar-width: var(--app-scrollbar-width, 6px);
+}
+
+/* Main container - full screen, TRANSPARENT so mpv video shows through */
+.app {
+  width: calc(100vw / var(--app-zoom, 1));
+  height: calc(100vh / var(--app-zoom, 1));
+  zoom: var(--app-zoom, 1);
+  position: relative;
+  background: transparent;
+  color: white;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom title bar for frameless window */
+.title-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 32px;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  -webkit-app-region: drag;
+  user-select: none;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+/* v1/v2 cover the titlebar with the page background on non-hero views so the
+   desktop never bleeds through (v3 keeps it transparent). */
+.title-bar:not(.active-view-none) {
+  background: var(--titlebar-cover-bg, rgba(0, 0, 0, 0.5));
+}
+
+/* View transition wrapper — v1/v2 stretch it to the top so child page
+   backgrounds cover the titlebar. Scoped to v1/v2 on purpose: the tokens are
+   only defined there, and v3 must keep the base rule (top: 32px) so its fixed
+   child pages stay on screen — an unscoped top:auto would collapse the
+   container to a 0-height box at the bottom of the viewport. */
+html[data-ui-version="v1"] .view-transition-container,
+html[data-ui-version="v2"] .view-transition-container {
+  top: var(--view-transition-top, 0px);
+  height: var(--view-transition-height, 100%);
+}
+
+/* Prevent drag on interactive elements inside title bar & playback header */
+.title-bar button,
+.title-bar input,
+.title-bar .title-bar-search-integrated,
+.playback-header-container,
+.playback-header-container * {
+  -webkit-app-region: no-drag !important;
+  user-select: auto;
+}
+
+.title-bar.visible {
+  opacity: 1;
+}
+
+/* Hide cursor when controls are hidden */
+.app.controls-hidden {
+  cursor: none;
+}
+
+.title-bar-logo {
+  margin-left: 12px;
+  height: 24px;
+  width: auto;
+  opacity: 0.8;
+  color: white;
+  filter: var(--titlebar-nav-filter, none);
+}
+
+.window-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+.window-controls button {
+  width: 46px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.window-controls button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.window-controls button.close:hover {
+  background: #e81123;
+}
+
+.window-control-icon {
+  display: block;
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  stroke-linecap: square;
+  shape-rendering: geometricPrecision;
+}
+
+/* Title Bar Layout - Using spacer pattern for centering */
+.title-bar-spacer {
+  flex: 1;
+  /* This spacer is draggable (inherits from .title-bar) */
+}
+
+.title-bar-content {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  -webkit-app-region: no-drag;
+  z-index: 15;
+}
+
+/* Unified Navigation Bar - Segmented Control + Search as one unit */
+.title-bar-unified {
+  display: flex;
+  align-items: center;
+  background: var(--titlebar-unified-bg, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--titlebar-unified-border-color, rgba(255, 255, 255, 0.15));
+  backdrop-filter: var(--titlebar-unified-blur-filter, none);
+  -webkit-backdrop-filter: var(--titlebar-unified-blur-filter, none);
+  box-shadow: var(--titlebar-unified-shadow, none);
+  border-radius: 6px;
+  padding: 2px 3px;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+/* Segmented Control - embedded in unified bar */
+.title-bar-segmented {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.segmented-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex: 1 0 0%;
+  padding: 4px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--seg-btn-color, rgba(255, 255, 255, 0.7));
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 22px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+/* Segmented control shell shared by the modal pill family (LogoEditorModal,
+   LogosTab, EpgEditorModal). The modal files scope their own accent/compact
+   overrides; EpgEditorModal keeps its own .epg-editor-field chrome. */
+.card-segmented-control {
+  display: flex;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.segmented-btn:hover {
+  color: white;
+  background: var(--seg-btn-hover-bg, transparent);
+}
+
+.segmented-btn.active {
+  background: var(--seg-btn-active-bg, rgba(255, 255, 255, 0.15));
+  color: white;
+  box-shadow: var(--seg-btn-active-shadow, 0 2px 8px rgba(0, 0, 0, 0.2));
+}
+
+.segmented-btn svg {
+  flex-shrink: 0;
+}
+
+/* Titlebar nav buttons — v3 dark glass text + drop-shadow (v1/v2 fall back to
+   the shared tokens; the light sheet's !important rules still win in light). */
+.title-bar .segmented-btn {
+  color: var(--titlebar-seg-color, var(--seg-btn-color, rgba(255, 255, 255, 0.7)));
+  filter: var(--titlebar-nav-filter, none);
+}
+
+.title-bar .segmented-btn:hover {
+  color: var(--titlebar-seg-hover-color, #ffffff);
+}
+
+.title-bar .segmented-btn.active {
+  color: var(--titlebar-seg-active-color, #ffffff);
+}
+
+/* Divider between segmented buttons and search */
+.unified-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 5px;
+}
+
+/* Integrated Search - part of unified bar */
+.title-bar-search-integrated {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 22px;
+  min-width: 120px;
+  border-radius: 4px;
+  background: transparent;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.title-bar-search-integrated:focus-within {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.title-bar-search-integrated .title-bar-search-icon {
+  color: rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+.title-bar-search-integrated .title-bar-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 12px;
+  outline: none;
+  width: 100%;
+  min-width: 60px;
+}
+
+.title-bar-search-integrated .title-bar-search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.title-bar-search-integrated .title-bar-search-clear {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 9px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.title-bar-search-integrated .title-bar-search-clear:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+/* Advanced Search Button in Title Bar */
+.title-bar-advanced-search-btn {
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: rgba(255, 255, 255, 0.4);
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.title-bar-advanced-search-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Title Bar Search History Dropdown */
+/* Controller/remote users get the dedicated controller search modal, so the
+   titlebar history dropdown is hidden while TV navigation is active. */
+body.tv-nav-active .title-bar-search-history {
+  display: none !important;
+}
+
+.title-bar-search-history {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  min-width: 200px;
+  background: #1e1e2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  padding: 4px 0;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.title-bar-search-history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  transition: background 0.1s ease;
+}
+
+.title-bar-search-history-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.title-bar-search-history-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.title-bar-search-history-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-bar-search-history-remove {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 9px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.title-bar-search-history-remove:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.title-bar-search-history-clear-all {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  text-align: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  transition: color 0.1s ease;
+}
+
+.title-bar-search-history-clear-all:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Title Bar Right Indicators Container */
+.title-bar-right-indicators {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 10;
+  -webkit-app-region: no-drag;
+}
+
+.title-bar-right-indicators > *:last-child {
+  margin-right: 8px;
+}
+
+/* Title Bar Recording Indicator */
+.title-bar-recording-indicator {
+  display: flex;
+  align-items: center;
+  animation: fadeIn 0.3s ease-out;
+  z-index: 10;
+  filter: var(--titlebar-nav-filter, none);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Title Bar Settings Button */
+.title-bar-settings-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+  margin-right: 8px;
+  filter: var(--titlebar-nav-filter, none);
+}
+
+.title-bar-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.title-bar-settings-btn.active {
+  background: rgba(0, 212, 255, 0.2);
+  color: #00d4ff;
+}
+
+/* Calendar button in titlebar */
+.title-bar-calendar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-app-region: no-drag;
+  margin-right: 8px;
+  font-size: 18px;
+  filter: var(--titlebar-nav-filter, none);
+}
+
+.title-bar-calendar-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+.title-bar-calendar-btn.active {
+  background: rgba(0, 212, 255, 0.2);
+}
+
+/* Video layer - mpv renders BEHIND this via --wid embedding */
+.video-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Double-click overlay for fullscreen toggle - covers video area only */
+.video-doubleclick-overlay {
+  position: absolute;
+  top: 32px; /* Below title bar */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  pointer-events: auto;
+  z-index: 5; /* Below NowPlayingBar (z-index: 100) and titlebar */
+}
+
+/* Placeholder shown before any stream is loaded */
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  opacity: 0.7;
+  background: rgba(0, 0, 0, 0.8);
+  padding: clamp(32px, 6vw, 56px) clamp(32px, 6vw, 64px);
+  border-radius: 12px;
+  pointer-events: auto;
+  color: white;
+  min-height: 280px;
+  position: relative;
+  z-index: 80;
+}
+
+.placeholder__logo {
+  width: clamp(120px, 18vw, 220px);
+  height: auto;
+  opacity: 0.75;
+}
+
+/* Sync status indicator - sits below logo with fixed height to prevent shifting */
+.sync-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 28px;
+  height: 24px;
+  opacity: 0.6;
+}
+
+/* Invisible placeholder to reserve space when sync status is hidden */
+.placeholder__spacer {
+  height: 52px;
+  /* Same as sync-status margin-top + height */
+}
+
+.sync-status__spinner {
+  width: 16px;
+  height: 16px;
+  min-width: 16px;
+  min-height: 16px;
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #00d4ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sync-status__text {
+  font-size: 0.85rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Now playing indicator */
+.now-playing {
+  position: absolute;
+  top: 50px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  pointer-events: auto;
+}
+
+/* Error Banner */
+.error-banner {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  right: 0;
+  background: #e74c3c;
+  padding: 10px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+}
+
+.error-banner button {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid white;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+
+/* Resize grip for frameless window */
+.resize-grip {
+  position: fixed;
+  bottom: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+  cursor: nwse-resize;
+  z-index: 9999;
+  -webkit-app-region: no-drag;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: auto;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Show when controls are visible */
+.resize-grip.visible {
+  opacity: 0.5;
+}
+
+.resize-grip.visible:hover {
+  opacity: 1;
+}
+
+.resize-grip svg {
+  display: block;
+}
+
+/* Player Control Buttons */
+.player-controls-buttons {
+  position: fixed;
+  bottom: 100px;
+  right: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 150;
+  pointer-events: auto;
+  opacity: 0;
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.player-control-btn {
+  width: 48px;
+  height: 48px;
+  border: none;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+.player-control-btn:hover {
+  background: rgba(0, 212, 255, 0.8);
+  border-color: #00d4ff;
+  transform: scale(1.1);
+}
+
+.player-control-btn:active {
+  transform: scale(0.95);
+}
+
+.player-control-btn svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* ==========================================================================
+   LIVE SPORTS OVERLAY WIDGET (main screen)
+   ========================================================================== */
+.live-sports-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(100% / var(--sports-scale, 1));
+  z-index: 70;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, var(--sports-bg-opacity, 0.7)) 0%,
+    rgba(0, 0, 0, calc(var(--sports-bg-opacity, 0.7) * 0.5)) 60%,
+    transparent 100%
+  );
+  padding: 36px 12px 18px;
+  pointer-events: none;
+  overflow: hidden;
+  transition: padding 0.3s ease, top 0.3s ease, opacity 0.3s ease;
+  transform-origin: top center;
+  transform: translateX(-50%) scale(var(--sports-scale, 1));
+}
+
+/* When controls are hidden, fit tightly to only the live sports overlay */
+.live-sports-overlay.controls-hidden {
+  top: 0;
+  padding: 6px 12px 14px;
+}
+
+.live-sports-track {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8px, black calc(100% - 8px), transparent);
+}
+
+.live-sports-track.is-ticker {
+  overflow-x: visible;
+  width: max-content;
+  animation: marquee var(--marquee-duration, 30s) linear infinite;
+  /* Remove mask from the track itself, move it to the container if needed, but since container has overflow: hidden and it spans full width, it's fine. Wait, the overlay itself can have the mask. */
+}
+
+.live-sports-track.is-ticker:hover {
+  animation-play-state: paused;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(calc(-50% - 8px)); }
+}
+
+.live-sports-track::-webkit-scrollbar {
+  display: none;
+}
+
+.live-sports-score-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.live-sports-score-item:hover {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.live-sports-score-league {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.6);
+  white-space: nowrap;
+}
+
+.live-sports-score-matchup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-sports-score-block {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.live-sports-score-team {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  white-space: nowrap;
+}
+
+.live-sports-score-team.winning {
+  color: #fff;
+  font-weight: 700;
+}
+
+.live-sports-score-vs {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+/* Tabular numerals + a fixed-width cell keep the card a constant width as
+   scores tick up ("9" → "10"), so score updates don't shift the whole strip. */
+.live-sports-score-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: max(16px, 2ch);
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-sports-score-value.winning {
+  color: #fff;
+}
+
+.live-sports-score-status {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-primary, #ef4444);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Restore hidden matches area - positioned at right edge of overlay */
+.live-sports-restore-area {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 16px 20px;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.35) 60%, transparent 100%);
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.live-sports-restore-area.visible {
+  opacity: 1;
+}
+
+.live-sports-restore-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.live-sports-restore-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Context menu for hiding matches */
+.live-sports-context-menu {
+  position: fixed;
+  background: var(--bg-secondary, rgba(42, 42, 42, 0.95));
+  border: 1px solid var(--border-color, #444);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  min-width: 180px;
+  padding: 6px 0;
+  z-index: 10001;
+  animation: contextMenuFadeIn 0.12s ease-out;
+  font-size: 0.85rem;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.live-sports-context-menu-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  color: var(--text-primary, #e0e0e0);
+  transition: all 0.15s ease;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-sports-context-menu-item:hover {
+  background: var(--accent-primary-transparent, rgba(0, 212, 255, 0.1));
+  color: var(--accent-primary, #00d4ff);
+}
+
+.live-sports-context-menu-item:active {
+  background: var(--accent-primary-transparent, rgba(0, 212, 255, 0.2));
+}
+
+.live-sports-context-menu-separator {
+  height: 1px;
+  background: var(--border-color, #444);
+  margin: 6px 8px;
+}
+
+/* ==========================================================================
+   Premium VOD & Stremio Loading Overlay
+   ========================================================================== */
+.vod-loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9; /* Above video background (5) but below overlays/titlebar */
+  background: #060608;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  animation: vodFadeIn 0.3s ease-out;
+}
+
+.vod-loading-overlay__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+  filter: blur(20px) brightness(0.5);
+  transform: scale(1.1); /* Prevents blurred edges from showing black space */
+  z-index: 1;
+}
+
+.vod-loading-overlay__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  max-width: 80%;
+  padding: 24px;
+}
+
+.vod-loading-overlay__logo {
+  max-width: 420px;
+  max-height: 220px;
+  object-fit: contain;
+  animation: vodPulse 2.2s ease-in-out infinite;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
+}
+
+.vod-loading-overlay__title {
+  font-size: 3rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.7);
+  animation: vodPulse 2.2s ease-in-out infinite;
+  margin-bottom: 16px;
+}
+
+.vod-loading-overlay__subtitle {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  animation: vodPulse 2.2s ease-in-out infinite;
+  animation-delay: 0.2s;
+}
+
+@keyframes vodFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes vodPulse {
+  0%, 100% {
+    opacity: 0.35;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+}
+
+/* Video Active: transparent titlebar with gradient scrim */
+.title-bar.video-active {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom: none !important;
+  box-shadow: none !important;
+}
+
+.title-bar.video-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 100%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* PiP Mode: hide titlebar */
+.title-bar.pip-mode {
+  display: none;
+}
+
+/* PiP Mode: adjust app container */
+.app.pip-mode {
+  cursor: default;
+}
+
+/* PiP drag overlay — covers video area for window dragging */
+.pip-drag-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 55;
+  cursor: grab;
+}
+
+.pip-drag-overlay:active {
+  cursor: grabbing;
+}
+
+/* Modal scaling for UI Scaling (app-zoom) */
+.playlist-list-modal,
+.playlist-editor-modal,
+.failover-group-list-modal,
+.custom-group-manager-modal,
+.channel-manager-modal,
+.category-manager-modal,
+.fav-manager-modal,
+.dvr-modal,
+.modal-container {
+  zoom: var(--app-zoom, 1);
+}
+
+/* ─── Custom Scrollbar Width & Visibility Override ─────────────────────────── */
+/* Chrome 121+ ignores the legacy ::-webkit-scrollbar pseudo-elements as soon as
+   EITHER standard property is non-auto (see css-scrollbars spec). Component CSS
+   sets `scrollbar-width: thin` AND a custom `scrollbar-color` on VOD/local/
+   playlist containers, so we must reset both to `auto` here or the
+   `::-webkit-scrollbar { width: var(--app-scrollbar-width) }` override below is
+   never applied and the scrollbar never expands. */
+html[data-custom-scrollbar="true"],
+html[data-custom-scrollbar="true"] * {
+  scrollbar-width: auto !important;
+  scrollbar-color: auto !important;
+}
+
+html[data-custom-scrollbar="true"] ::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .modern-ui ::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .modern-ui-v3 ::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-browse::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-browse *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-browse__grid::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-browse__grid *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-page__content::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-page__content *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-page__home::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-page__home *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .playlists-view::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .playlists-view *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .local-tab-container::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .local-tab-container *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-service-view::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-service-view *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .streaming-service-view::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .streaming-service-view *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-person-detail::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-person-detail *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .h-category-strip__scroll::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .category-strip-scrollable::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .category-strip-scrollable *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .category-strip-list::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .category-list::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .category-list *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .cm-bulk-scroll-list::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .cm-bulk-col::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .cm-bulk-modal *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .add-to-playlist-modal__body::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .add-to-playlist-list::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .add-to-playlist-episodes-list::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-metadata-edit-modal__body::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .vod-metadata-tmdb-results::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .playlist-queue-modal__body::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .playlist-queue-list::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .guide-channels::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .guide-channels *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .search-virtuoso::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .search-virtuoso *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .series-detail::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .series-detail *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .movie-detail::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .movie-detail *::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-detail::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-detail-left::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .stremio-detail-video-list::-webkit-scrollbar {
+  display: block !important;
+  width: var(--app-scrollbar-width, 12px) !important;
+}
+
+html[data-custom-scrollbar="true"] ::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .modern-ui ::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .modern-ui-v3 ::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-browse::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-browse *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-page__content::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-page__content *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-page__home::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-page__home *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .playlists-view::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .playlists-view *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .local-tab-container::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .local-tab-container *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .stremio-service-view::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .stremio-service-view *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .streaming-service-view::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .streaming-service-view *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .stremio-person-detail::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .stremio-person-detail *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .h-category-strip__scroll::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .category-strip-scrollable::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .category-strip-list::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .category-list::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .category-list *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .cm-bulk-scroll-list::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .cm-bulk-col::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .cm-bulk-modal *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .add-to-playlist-modal__body::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .add-to-playlist-list::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .add-to-playlist-episodes-list::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-metadata-edit-modal__body::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .vod-metadata-tmdb-results::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .playlist-queue-modal__body::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .playlist-queue-list::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .series-detail::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .series-detail *::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .movie-detail::-webkit-scrollbar-track,
+html[data-custom-scrollbar="true"] .movie-detail *::-webkit-scrollbar-track {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+html[data-custom-scrollbar="true"] ::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .modern-ui ::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .modern-ui-v3 ::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-browse::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-browse *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__content::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__content *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__home::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__home *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlists-view::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlists-view *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .local-tab-container::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .local-tab-container *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-service-view::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-service-view *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .streaming-service-view::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .streaming-service-view *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-person-detail::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-person-detail *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .h-category-strip__scroll::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-strip-scrollable::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-strip-list::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-list::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-list *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .cm-bulk-scroll-list::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .cm-bulk-col::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .cm-bulk-modal *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .add-to-playlist-modal__body::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .add-to-playlist-list::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .add-to-playlist-episodes-list::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-metadata-edit-modal__body::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-metadata-tmdb-results::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlist-queue-modal__body::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlist-queue-list::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .series-detail::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .series-detail *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .movie-detail::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .movie-detail *::-webkit-scrollbar-thumb {
+  background: var(--vs-scrollbar-thumb-bg, var(--scrollbar-thumb-bg, rgba(255, 255, 255, 0.15))) !important;
+  border-radius: 4px !important;
+  border: none !important;
+}
+
+html[data-custom-scrollbar="true"] :hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] *:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vertical-sidebar:hover .vertical-sidebar__scrollable::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-browse:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-browse *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-browse:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__content:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__content *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-page__content:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__home:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-page__home *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-page__home:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlists-view:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlists-view *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .playlists-view:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .local-tab-container:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .local-tab-container *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .local-tab-container:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-service-view:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-service-view *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .stremio-service-view:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .streaming-service-view:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .streaming-service-view *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .streaming-service-view:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-person-detail:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .stremio-person-detail *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .stremio-person-detail:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay:hover *::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .h-category-strip__scroll:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-strip:hover .category-strip-scrollable::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-strip-scrollable:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-strip-list:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-list:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .category-list *:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .cm-bulk-scroll-list:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .cm-bulk-col:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .cm-bulk-modal *:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .add-to-playlist-modal__body:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .add-to-playlist-list:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .add-to-playlist-episodes-list:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-metadata-edit-modal__body:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .vod-metadata-tmdb-results:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlist-queue-modal__body:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .playlist-queue-list:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .series-detail:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .series-detail *:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .movie-detail:hover::-webkit-scrollbar-thumb,
+html[data-custom-scrollbar="true"] .movie-detail *:hover::-webkit-scrollbar-thumb {
+  background: var(--vs-scrollbar-thumb-hover-bg, var(--scrollbar-thumb-container-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.25)))) !important;
+}
+
+html[data-custom-scrollbar="true"] ::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .modern-ui ::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .modern-ui-v3 ::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vertical-sidebar__scrollable *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-browse::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-browse *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-page__content::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-page__content *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-page__home::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-page__home *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .playlists-view::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .playlists-view *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .local-tab-container::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .local-tab-container *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .stremio-service-view::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .stremio-service-view *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .streaming-service-view::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .streaming-service-view *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .stremio-person-detail::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .stremio-person-detail *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-cast-detail-overlay *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .h-category-strip__scroll::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .category-strip-scrollable::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .category-strip-list::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .category-list::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .category-list *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .cm-bulk-scroll-list::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .cm-bulk-col::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .cm-bulk-modal *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .add-to-playlist-modal__body::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .add-to-playlist-list::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .add-to-playlist-episodes-list::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-metadata-edit-modal__body::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .vod-metadata-tmdb-results::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .playlist-queue-modal__body::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .playlist-queue-list::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .series-detail::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .series-detail *::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .movie-detail::-webkit-scrollbar-thumb:hover,
+html[data-custom-scrollbar="true"] .movie-detail *::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, #00d4ff)) !important;
+}
+
+
+
+/* ─── Hide Horizontal Scrollbars on Carousels & Rows ─────────────────────────── */
+.carousel__scroll-container::-webkit-scrollbar,
+.carousel__scroll-container::-webkit-scrollbar:horizontal,
+.horizontal-carousel::-webkit-scrollbar,
+.horizontal-carousel::-webkit-scrollbar:horizontal,
+.movie-detail__cast-row::-webkit-scrollbar,
+.movie-detail__cast-row::-webkit-scrollbar:horizontal,
+.series-detail__cast-row::-webkit-scrollbar,
+.series-detail__cast-row::-webkit-scrollbar:horizontal,
+.stremio-carousel::-webkit-scrollbar,
+.stremio-carousel::-webkit-scrollbar:horizontal,
+.nuvio-carousel::-webkit-scrollbar,
+.nuvio-carousel::-webkit-scrollbar:horizontal,
+.streaming-service-view__items::-webkit-scrollbar,
+.streaming-service-view__items::-webkit-scrollbar:horizontal,
+html[data-custom-scrollbar="true"] .carousel__scroll-container::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .carousel__scroll-container::-webkit-scrollbar:horizontal,
+html[data-custom-scrollbar="true"] .horizontal-carousel::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .movie-detail__cast-row::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .series-detail__cast-row::-webkit-scrollbar,
+html[data-custom-scrollbar="true"] .streaming-service-view__items::-webkit-scrollbar {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
+
+html[data-custom-scrollbar="true"] .carousel__scroll-container,
+html[data-custom-scrollbar="true"] .horizontal-carousel,
+html[data-custom-scrollbar="true"] .movie-detail__cast-row,
+html[data-custom-scrollbar="true"] .series-detail__cast-row,
+html[data-custom-scrollbar="true"] .streaming-service-view__items {
+  scrollbar-width: none !important;
+}
+
+

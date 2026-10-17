@@ -1,0 +1,375 @@
+.stremio-addon-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--glass-overlay-bg, var(--bg-overlay, rgba(0, 0, 0, 0.6)));
+  backdrop-filter: var(--glass-overlay-filter, none);
+  -webkit-backdrop-filter: var(--glass-overlay-filter, none);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stremio-addon-modal {
+  width: 560px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: var(--glass-modal-bg, var(--surface-color, rgba(20, 20, 30, 0.98)));
+  border: var(--glass-modal-border, var(--glass-border, 1px solid rgba(255, 255, 255, 0.1)));
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: var(--glass-modal-filter-strong, var(--glass-modal-filter, blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%))));
+  -webkit-backdrop-filter: var(--glass-modal-filter-strong, var(--glass-modal-filter, blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%))));
+  overflow: hidden;
+  box-shadow: var(--glass-modal-shadow, var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.5)));
+}
+
+.stremio-addon-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+}
+
+.stremio-addon-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, white);
+}
+
+.stremio-addon-close {
+  background: none;
+  border: none;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.stremio-addon-close:hover {
+  color: var(--text-primary, white);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+}
+
+.stremio-addon-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.stremio-addon-body:hover {
+  scrollbar-color: var(--scrollbar-hover-color, var(--accent-primary, rgba(0, 212, 255, 0.5))) transparent;
+}
+
+.stremio-addon-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.stremio-addon-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stremio-addon-body::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-addon-body::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, rgba(0, 212, 255, 0.5)));
+}
+
+.stremio-addon-section-title {
+  margin: 0 0 6px 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+}
+
+.stremio-addon-section-desc {
+  margin: 0 0 12px 0;
+  font-size: 0.82rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.stremio-addon-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.stremio-addon-input {
+  flex: 1;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.12));
+  background: var(--surface-color, rgba(0, 0, 0, 0.3));
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  font-size: 0.85rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.stremio-addon-input:focus {
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  box-shadow: 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.1));
+}
+
+.stremio-addon-input::placeholder {
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
+}
+
+.stremio-addon-install-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, var(--accent-glow, rgba(0, 212, 255, 0.2)), var(--surface-color, rgba(0, 212, 255, 0.1)));
+  color: var(--accent-primary, #00d4ff);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.stremio-addon-install-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--accent-glow, rgba(0, 212, 255, 0.3)), var(--surface-hover, rgba(0, 212, 255, 0.15)));
+  box-shadow: 0 0 15px var(--accent-glow, rgba(0, 212, 255, 0.15));
+}
+
+.stremio-addon-install-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.stremio-addon-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(255, 80, 80, 0.1);
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 120, 120, 0.9);
+  font-size: 0.8rem;
+}
+
+.stremio-addon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stremio-addon-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: var(--surface-color, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+  border-radius: 10px;
+  gap: 12px;
+}
+
+.stremio-addon-item.disabled {
+  opacity: 0.45;
+}
+
+.stremio-addon-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.stremio-addon-item-name {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-primary, rgba(255, 255, 255, 0.9));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stremio-addon-item-badge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--accent-glow, rgba(0, 212, 255, 0.15));
+  color: var(--accent-primary, #00d4ff);
+  text-transform: uppercase;
+}
+
+.stremio-addon-item-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stremio-addon-item-url {
+  font-size: 0.7rem;
+  color: var(--text-muted, rgba(255, 255, 255, 0.3));
+  font-family: monospace;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stremio-addon-remove-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 80, 80, 0.2);
+  background: rgba(255, 80, 80, 0.08);
+  color: rgba(255, 120, 120, 0.9);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.stremio-addon-remove-btn:hover {
+  background: rgba(255, 80, 80, 0.15);
+}
+
+.stremio-addon-empty {
+  text-align: center;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  padding: 24px 0;
+  font-size: 0.85rem;
+}
+
+/* ─── Reorder Arrow Buttons ───────────────────────────────── */
+
+.stremio-addon-reorder-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.stremio-addon-reorder-btn {
+  background: var(--surface-color, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.06));
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  border-radius: 4px;
+  width: 24px;
+  height: 24px;
+  font-size: 0.65rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.stremio-addon-reorder-btn:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
+}
+
+.stremio-addon-reorder-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.stremio-addon-configure-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  background: var(--surface-color, rgba(255, 255, 255, 0.04));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 1.1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.stremio-addon-configure-btn:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
+}
+
+.stremio-addon-toggle-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.15));
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  color: var(--text-secondary, rgba(255, 255, 255, 0.8));
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.stremio-addon-toggle-btn:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.12));
+  color: var(--text-primary, white);
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.25));
+}
+
+.stremio-addon-toggle-btn.disabled {
+  border-color: rgba(80, 200, 120, 0.3);
+  background: rgba(80, 200, 120, 0.1);
+  color: rgba(80, 200, 120, 0.9);
+}
+
+.stremio-addon-toggle-btn.disabled:hover {
+  background: rgba(80, 200, 120, 0.18);
+  border-color: rgba(80, 200, 120, 0.4);
+}
+
+/* ─── Sync Positions Button ───────────────────────────────── */
+
+.stremio-addon-sync-btn {
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  border: 1px solid var(--accent-primary, #00d4ff);
+  background: transparent;
+  color: var(--accent-primary, #00d4ff);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  animation: pulse-sync-btn 2.5s infinite;
+  box-shadow: 0 0 8px rgba(0, 212, 255, 0.2);
+}
+
+@keyframes pulse-sync-btn {
+  0% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(0, 212, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 212, 255, 0);
+  }
+}
+
+.stremio-addon-sync-btn:hover:not(:disabled) {
+  background: var(--accent-primary, #00d4ff);
+  color: #14141e;
+  box-shadow: 0 0 12px var(--accent-glow, rgba(0, 212, 255, 0.4));
+}
+
+.stremio-addon-sync-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  animation: none;
+}

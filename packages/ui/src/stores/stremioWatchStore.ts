@@ -1,0 +1,290 @@
+import { create } from 'zustand';
+import type { StremioStream } from '../types/stremio';
+import { bindStoreToKv } from './persistToKv';
+import { sanitizeWatchState, type WatchKvValue } from './kvSchemas';
+
+/** Storage key (kept identical to the old localStorage key for migration). */
+const STORAGE_KEY = 'stremio-watch-history';
+
+const FINISHED_THRESHOLD = 0.9;
+const MAX_HISTORY = 20;
+
+export interface StremioWatchEntry {
+  metaId: string;
+  type: 'movie' | 'series';
+  name: string;
+  poster?: string;
+  /** 0–1 fraction watched (movie progress or last episode progress) */
+  progressFraction: number;
+  // Series tracking
+  lastWatchedVideoId?: string;
+  lastSeason?: number;
+  lastEpisode?: number;
+  /** Set when the last watched episode was finished (≥90%) */
+  nextVideoId?: string;
+  nextSeason?: number;
+  nextEpisode?: number;
+  watchedAt: number;
+  lastSelectedStream?: StremioStream;
+}
+
+export interface StremioEpisodeProgress {
+  videoId: string;
+  metaId: string;
+  season: number;
+  episode: number;
+  progressFraction: number;
+  finished: boolean;
+  watchedAt: number;
+}
+
+interface StremioWatchState {
+  history: StremioWatchEntry[];
+  /** Keyed by StremioVideo.id */
+  episodeProgress: Record<string, StremioEpisodeProgress>;
+}
+
+interface StremioWatchStore extends StremioWatchState {
+
+  recordMovieWatch: (metaId: string, name: string, poster?: string, lastSelectedStream?: StremioStream) => void;
+  updateMovieProgress: (metaId: string, progressFraction: number) => void;
+
+  recordEpisodeStart: (
+    metaId: string,
+    name: string,
+    poster: string | undefined,
+    videoId: string,
+    season: number,
+    episode: number,
+    nextVideoId?: string,
+    nextSeason?: number,
+    nextEpisode?: number,
+    lastSelectedStream?: StremioStream
+  ) => void;
+
+  updateEpisodeProgress: (
+    metaId: string,
+    videoId: string,
+    progressFraction: number,
+    season: number,
+    episode: number,
+    nextVideoId?: string,
+    nextSeason?: number,
+    nextEpisode?: number
+  ) => void;
+
+  getEpisodeWatched: (videoId: string) => boolean;
+  getEpisodeProgressFraction: (videoId: string) => number;
+  toggleEpisodeWatched: (videoId: string, metaId: string, season: number, episode: number) => void;
+  setEpisodesFinishedDirectly: (progressMap: Record<string, StremioEpisodeProgress>) => void;
+  removeFromHistory: (metaId: string) => void;
+  clearHistory: () => void;
+}
+
+export const useStremioWatchStore = create<StremioWatchStore>()((set, get) => ({
+      history: [],
+      episodeProgress: {},
+
+
+      recordMovieWatch: (metaId, name, poster, lastSelectedStream) => {
+        set((state) => {
+          const history = state.history || [];
+          const existing = history.find((h) => h.metaId === metaId);
+          const entry: StremioWatchEntry = {
+            metaId,
+            type: 'movie',
+            name,
+            poster,
+            progressFraction: existing?.progressFraction ?? 0,
+            watchedAt: Date.now(),
+            lastSelectedStream: lastSelectedStream ?? existing?.lastSelectedStream,
+          };
+          const filtered = history.filter((h) => h.metaId !== metaId);
+          return { history: [entry, ...filtered].slice(0, MAX_HISTORY) };
+        });
+      },
+
+      updateMovieProgress: (metaId, progressFraction) => {
+        set((state) => {
+          const history = state.history || [];
+          const idx = history.findIndex((h) => h.metaId === metaId);
+          if (idx === -1) return state;
+          const updated = [...history];
+          updated[idx] = { ...updated[idx], progressFraction };
+          return { history: updated };
+        });
+      },
+
+      recordEpisodeStart: (metaId, name, poster, videoId, season, episode, nextVideoId, nextSeason, nextEpisode, lastSelectedStream) => {
+        const now = Date.now();
+        set((state) => {
+          const history = state.history || [];
+          const episodeProgress = state.episodeProgress || {};
+          const existingEntry = history.find((h) => h.metaId === metaId);
+          const existingEp = episodeProgress[videoId];
+
+          const epProgress: StremioEpisodeProgress = {
+            videoId,
+            metaId,
+            season,
+            episode,
+            progressFraction: existingEp?.progressFraction ?? 0,
+            finished: existingEp?.finished ?? false,
+            watchedAt: now,
+          };
+
+          const entry: StremioWatchEntry = {
+            metaId,
+            type: 'series',
+            name,
+            poster,
+            progressFraction: existingEp?.progressFraction ?? 0,
+            lastWatchedVideoId: videoId,
+            lastSeason: season,
+            lastEpisode: episode,
+            // Inherit next episode if previously computed as finished; otherwise use passed values
+            nextVideoId: existingEp?.finished ? (nextVideoId ?? existingEntry?.nextVideoId) : existingEntry?.nextVideoId,
+            nextSeason: existingEp?.finished ? (nextSeason ?? existingEntry?.nextSeason) : existingEntry?.nextSeason,
+            nextEpisode: existingEp?.finished ? (nextEpisode ?? existingEntry?.nextEpisode) : existingEntry?.nextEpisode,
+            watchedAt: now,
+            lastSelectedStream: lastSelectedStream ?? existingEntry?.lastSelectedStream,
+          };
+
+          const filtered = history.filter((h) => h.metaId !== metaId);
+          return {
+            history: [entry, ...filtered].slice(0, MAX_HISTORY),
+            episodeProgress: { ...episodeProgress, [videoId]: epProgress },
+          };
+        });
+      },
+
+      updateEpisodeProgress: (metaId, videoId, progressFraction, season, episode, nextVideoId, nextSeason, nextEpisode) => {
+        const finished = progressFraction >= FINISHED_THRESHOLD;
+        set((state) => {
+          const history = state.history || [];
+          const episodeProgress = state.episodeProgress || {};
+          const existingEp = episodeProgress[videoId];
+          const epProgress: StremioEpisodeProgress = {
+            videoId,
+            metaId,
+            season,
+            episode,
+            progressFraction,
+            finished,
+            watchedAt: Date.now(),
+          };
+
+          const historyIdx = history.findIndex((h) => h.metaId === metaId);
+          let newHistory = [...history];
+          if (historyIdx !== -1) {
+            newHistory[historyIdx] = {
+              ...newHistory[historyIdx],
+              progressFraction,
+              lastWatchedVideoId: videoId,
+              lastSeason: season,
+              lastEpisode: episode,
+              // When finished, promote next episode; when in progress, clear next so card shows "Continue"
+              nextVideoId: finished ? nextVideoId : undefined,
+              nextSeason: finished ? nextSeason : undefined,
+              nextEpisode: finished ? nextEpisode : undefined,
+            };
+          }
+
+          void existingEp; // consumed above
+          return {
+            history: newHistory,
+            episodeProgress: { ...episodeProgress, [videoId]: epProgress },
+          };
+        });
+      },
+
+      getEpisodeWatched: (videoId) => {
+        return (get().episodeProgress || {})[videoId]?.finished ?? false;
+      },
+
+      getEpisodeProgressFraction: (videoId) => {
+        return (get().episodeProgress || {})[videoId]?.progressFraction ?? 0;
+      },
+
+      toggleEpisodeWatched: (videoId, metaId, season, episode) => {
+        const state = get();
+        const episodeProgress = state.episodeProgress || {};
+        const current = episodeProgress[videoId];
+        const isFinished = current?.finished ?? false;
+
+        if (isFinished) {
+          set((s) => {
+            const next = { ...(s.episodeProgress || {}) };
+            delete next[videoId];
+            return { episodeProgress: next };
+          });
+          import('../db').then(({ deleteEpisodeHistory }) => {
+            deleteEpisodeHistory(videoId).catch(() => {});
+          });
+        } else {
+          const now = Date.now();
+          const epProgress: StremioEpisodeProgress = {
+            videoId,
+            metaId,
+            season,
+            episode,
+            progressFraction: 1,
+            finished: true,
+            watchedAt: now,
+          };
+          set((s) => ({
+            episodeProgress: { ...(s.episodeProgress || {}), [videoId]: epProgress },
+          }));
+          import('../db').then(({ recordEpisodeWatch }) => {
+            recordEpisodeWatch(
+              videoId,
+              metaId,
+              'stremio',
+              season,
+              episode,
+              '',
+              0,
+              0
+            ).catch(() => {});
+          });
+        }
+      },
+
+      setEpisodesFinishedDirectly: (progressMap) => {
+        set((state) => ({
+          episodeProgress: { ...(state.episodeProgress || {}), ...progressMap },
+        }));
+      },
+
+      removeFromHistory: (metaId) => {
+        set((state) => ({
+          history: (state.history || []).filter((h) => h.metaId !== metaId),
+        }));
+      },
+
+      clearHistory: () => set({ history: [] }),
+}));
+
+// ── SQLite-backed persistence (replaces localStorage) ──────────────────────
+// Bootstraps synchronously from the old localStorage key for first paint, then
+// the authoritative copy lives in SQLite so it never competes for the WebView2
+// localStorage quota.
+const watchKv = bindStoreToKv<WatchKvValue>(
+  STORAGE_KEY,
+  (raw) => JSON.parse(raw) as WatchKvValue,
+  (value) => {
+    if (value) useStremioWatchStore.setState(value);
+  },
+  (state) => JSON.stringify({ history: state.history, episodeProgress: state.episodeProgress }),
+  () => {
+    const s = useStremioWatchStore.getState();
+    return { history: s.history, episodeProgress: s.episodeProgress };
+  },
+  (fn) => useStremioWatchStore.subscribe(fn),
+  sanitizeWatchState
+);
+
+/** Resolves once the SQLite copy of the watch history has been loaded. */
+export const stremioWatchKvReady: Promise<void> = watchKv.whenReady;
+
+

@@ -1,0 +1,151 @@
+[package]
+name = "ynotv"
+version = "2.5.2"
+description = "A Tauri App"
+authors = ["tbeezy"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "packagesapp_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["macos-private-api", "tray-icon", "image-ico", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-log = "2"
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-store = "2"
+tauri-plugin-http = { version = "2", features = ["unsafe-headers"] }
+raw-window-handle = "0.6"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tauri-plugin-sql = { version = "2", features = ["sqlite"] }
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio"] }
+
+# DVR dependencies
+rusqlite = { version = "0.32", features = ["bundled", "chrono", "serde_json"] }
+r2d2 = "0.8"
+r2d2_sqlite = "0.25"
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-appender = "0.2"
+walkdir = "2.5"
+sysinfo = "0.31"
+camino = "1.1"
+tokio-cron-scheduler = "0.13"
+once_cell = "1.20"
+parking_lot = "0.12"
+which = "7"
+dirs = "6"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Streaming EPG parser dependencies
+quick-xml = { version = "0.36", features = ["serialize"] }
+tokio-util = { version = "0.7", features = ["io", "rt"] }
+tokio-stream = "0.1"
+futures-util = "0.3"
+bytes = "1"
+flate2 = "1.0"
+
+# HTTP client for TMDB caching and EPG streaming
+reqwest = { version = "0.12", features = ["json", "stream", "rustls-tls", "gzip", "brotli", "deflate", "socks", "http2"], default-features = false }
+base64 = "0.22"
+log = "0.4.29"
+keyring = "3"
+
+# Chromecast dependencies
+rust_cast = { version = "0.21", features = ["thread_safe"] }
+mdns-sd = "0.19"
+discord-rich-presence = "1.1"
+
+# Stream Probe dependencies
+regex = "1"
+url = "2"
+
+# FFT dependency for per-process audio visualizer
+rustfft = "6.2"
+
+# MPV bindings
+libmpv2 = "4"
+libmpv2-sys = "4"
+libc = "0.2"
+
+# Gamepad & Controller support
+# gilrs must use the XInput backend, NOT the default WGI (Windows.Gaming.Input)
+# backend: WGI silently finds zero controllers in unpackaged Win32 apps (it
+# needs a package identity), which left the native listener with nothing to
+# emit while the browser Gamepad API (which has its own XInput stack) kept
+# working only while the window was focused. XInput sees the standard pads
+# (real Xbox controllers, and DualSense pads emulated as Xbox 360).
+gilrs = { version = "0.10", default-features = false, features = ["xinput"] }
+
+# DirectInput/HID gamepads (raw DualSense / DualShock over Bluetooth or USB)
+# are invisible to XInput, and Chromium's Gamepad API won't deliver their
+# input while the window is unfocused — so read them directly via HID.
+# default-features = false avoids the libusb feature (needs pkg-config); the
+# platform HID backend (Win32 HID API here) is always compiled in.
+hidapi = { version = "2", default-features = false }
+
+# Embedded Web & Remote WebSocket server
+axum = { version = "0.7", features = ["ws"] }
+
+# Random pairing token for the Phone Remote
+uuid = { version = "1", features = ["v4"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", features = [
+  "NSGeometry",
+  "NSThread",
+  "NSValue",
+  "NSDictionary",
+  "NSString",
+] }
+objc2-app-kit = { version = "0.3", features = [
+  "NSWindow",
+  "NSView",
+  "NSOpenGL",
+  "NSOpenGLView",
+  "NSResponder",
+] }
+objc2-web-kit = { version = "0.3", features = ["WKWebView"] }
+core-foundation = "0.10"
+core-video = "0.4"
+
+# Win32 APIs for MPV HWND resizing and WASAPI loopback audio capture (Windows only)
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_Foundation",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+    "Win32_System_Threading",
+    "Win32_Graphics_Gdi",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Variant",
+] }
+
+[dev-dependencies]
+tempfile = "3"
+
+[patch.crates-io]
+# Local patch adds: set_read_timeout(), receive_nonblocking(), connect_with_timeout()
+rust_cast = { path = "vendor/rust_cast" }
+

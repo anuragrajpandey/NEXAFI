@@ -1,0 +1,196 @@
+/* WidgetBar — single unified horizontal glass panel container for all active overlay widgets */
+
+.widget-bar {
+  position: absolute;
+  bottom: 150px;
+  left: 16px;
+  z-index: 55;
+
+  /* Horizontal multi-column layout inside one unified glass container */
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0;
+
+  background: rgba(10, 8, 20, var(--widget-bg-opacity, 0.75)) !important;
+  backdrop-filter: blur(24px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08),
+              0 8px 32px rgba(0, 0, 0, 0.4) !important;
+  overflow: hidden;
+  max-height: 240px;
+
+  /* Scale the entire unified panel at once */
+  transform: scale(var(--widget-scale, 1));
+  transform-origin: bottom left;
+
+  pointer-events: none;
+  transition: bottom 0.3s ease;
+}
+
+/* Hairline vertical column dividers between active widget columns */
+.widget-bar > * {
+  pointer-events: auto;
+  border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+  border-bottom: none !important;
+}
+
+.widget-bar > *:last-child {
+  border-right: none !important;
+}
+
+/* Strip individual widget card backgrounds & borders so they blend seamlessly into the unified glass container */
+.widget-bar .recent-channels-header,
+.widget-bar .recent-channels-list,
+.widget-bar .favorites-header,
+.widget-bar .favorites-list,
+.widget-bar .whats-next-header,
+.widget-bar .whats-next-body,
+.widget-bar .custom-group-header,
+.widget-bar .custom-group-list {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Column Header Styling */
+.widget-bar .recent-channels-header,
+.widget-bar .favorites-header,
+.widget-bar .whats-next-header,
+.widget-bar .custom-group-header {
+  padding: 10px 14px 6px 14px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Column Widths & Heights — Full visibility for 2-line channel entries */
+.widget-bar .recent-channels-widget,
+.widget-bar .favorites-widget,
+.widget-bar .custom-group-widget {
+  width: 210px;
+  flex-shrink: 0;
+}
+
+.widget-bar .whats-next-widget {
+  width: 270px;
+  flex-shrink: 0;
+}
+
+.widget-bar .recent-channels-list,
+.widget-bar .favorites-list,
+.widget-bar .custom-group-list {
+  height: 190px;
+  max-height: 190px;
+}
+
+.widget-bar .whats-next-body {
+  height: 190px;
+  max-height: 190px;
+  padding: 10px 14px;
+}
+
+/* Custom thin scrollbar styling matching app-wide theme */
+.widget-bar,
+.widget-bar * {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.widget-bar::-webkit-scrollbar,
+.widget-bar *::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.widget-bar::-webkit-scrollbar-track,
+.widget-bar *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.widget-bar::-webkit-scrollbar-thumb,
+.widget-bar *::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+.widget-bar::-webkit-scrollbar-thumb:hover,
+.widget-bar *::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* When Channel Info Overlay is active the Now Playing bar is shorter */
+.widget-bar.cio-enabled {
+  bottom: 76px;
+}
+
+/* When Clean / Borderless player controls are active, float right on top of the seek bar */
+.widget-bar.clean-design,
+.widget-bar.clean-design.cio-enabled {
+  bottom: 100px !important;
+}
+
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 600px) {
+  .widget-bar {
+    bottom: 140px;
+    left: 10px;
+  }
+
+  .widget-bar.cio-enabled {
+    bottom: 68px;
+  }
+
+  .widget-bar.clean-design,
+  .widget-bar.clean-design.cio-enabled {
+    bottom: 95px !important;
+  }
+}
+
+/* ── Widget Move Controls (Shared by all widgets) ── */
+.widget-move-controls {
+  display: flex;
+  gap: 4px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: auto;
+}
+
+/* Show controls when the widget is hovered */
+[class$="-widget"]:hover .widget-move-controls {
+  opacity: 1;
+}
+
+.widget-move-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.7);
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.widget-move-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  color: white;
+}
+
+.widget-move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

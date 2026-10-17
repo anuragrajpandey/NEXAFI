@@ -1,0 +1,326 @@
+import { useRef, useState, useCallback, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import type { InstalledAddon, StremioMeta, StremioMetaPreview } from '../../types/stremio';
+import { fetchMeta } from '../../services/stremio-addon';
+import { useStremioWatchStore, type StremioWatchEntry } from '../../stores/stremioWatchStore';
+import { useStremioAuthStore } from '../../stores/stremioAuthStore';
+import { useStremioLibraryStore } from '../../stores/stremioLibraryStore';
+import { useSetStremioSelectedSeason, useSetStremioPreselectVideoId, useUIStore } from '../../stores/uiStore';
+import { useStremioHover } from '../../contexts/StremioHoverContext';
+import './StremioHome.css';
+
+interface StremioRecentlyWatchedProps {
+  addons: InstalledAddon[];
+  onItemClick: (meta: StremioMeta) => void;
+}
+
+export function StremioRecentlyWatched({ addons, onItemClick }: StremioRecentlyWatchedProps) {
+  useTranslation();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const authStore = useStremioAuthStore();
+  const isSyncActive = authStore.authKey && authStore.syncProgress;
+  const cloudLibraryItems = authStore.cloudLibraryItems || [];
+  const localHistory = useStremioWatchStore((s) => s.history || []);
+  const library = useStremioLibraryStore((s) => s.library || []);
+
+  const history = useMemo(() => {
+    if (isSyncActive) {
+      console.log('[ContinueWatching] cloudLibraryItems:', cloudLibraryItems);
+      const filtered = cloudLibraryItems
+        .filter((i) => (!i.removed || i.temp) && i.type !== 'other' && !i._id.startsWith('iptv:') && i.state && i.state.timeOffset && i.state.timeOffset > 0)
+        .map((i) => {
+          const isSeries = i.type === 'series';
+          const progressFraction = i.state.duration && i.state.timeOffset ? Math.min(1.0, i.state.timeOffset / i.state.duration) : 0;
+          
+          let lastSeason = i.state.season;
+          let lastEpisode = i.state.episode;
+          let nextVideoId: string | undefined;
+          let nextSeason: number | undefined;
+          let nextEpisode: number | undefined;
+
+          if (isSeries && i.state.video_id) {
+            const parts = i.state.video_id.split(':');
+            if (parts.length >= 3) {
+              lastSeason = parseInt(parts[parts.length - 2], 10);
+              lastEpisode = parseInt(parts[parts.length - 1], 10);
+            }
+          }
+
+          const isFinished = progressFraction >= 0.9;
+          
+          if (isSeries && lastSeason !== undefined && lastEpisode !== undefined) {
+            const localItem = library.find((x) => x.id === i._id);
+            if (localItem?.videos) {
+              const sorted = [...localItem.videos].sort((a, b) => {
+                if ((a.season ?? 0) !== (b.season ?? 0)) return (a.season ?? 0) - (b.season ?? 0);
+                return (a.episode ?? 0) - (b.episode ?? 0);
+              });
+              const idx = sorted.findIndex((v) => v.id === i.state.video_id);
+              if (isFinished && idx >= 0 && idx < sorted.length - 1) {
+                const nxt = sorted[idx + 1];
+                nextVideoId = nxt.id;
+                nextSeason = nxt.season;
+                nextEpisode = nxt.episode;
+              }
+            }
+          }
+
+          return {
+            metaId: i._id,
+            type: i.type as 'movie' | 'series',
+            name: i.name,
+            poster: i.poster,
+            progressFraction,
+            lastWatchedVideoId: i.state.video_id,
+            lastSeason,
+            lastEpisode,
+            nextVideoId,
+            nextSeason,
+            nextEpisode,
+            watchedAt: i._mtime ? Date.parse(i._mtime) : Date.now(),
+          } as StremioWatchEntry;
+        })
+        .sort((a, b) => b.watchedAt - a.watchedAt);
+      
+      console.log('[ContinueWatching] filtered history:', filtered);
+      return filtered;
+    } else {
+      return localHistory;
+    }
+  }, [isSyncActive, cloudLibraryItems, localHistory, library]);
+
+  const removeFromHistory = useStremioWatchStore((s) => s.removeFromHistory);
+  const dismissFromContinueWatching = useStremioAuthStore((s) => s.dismissFromContinueWatching);
+  const setSelectedSeason = useSetStremioSelectedSeason();
+  const setPreselectVideoId = useSetStremioPreselectVideoId();
+
+  const update = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 0);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  }, []);
+
+  const stremioView = useUIStore((s) => s.stremioView);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    update();
+    const el = e.currentTarget;
+    if (el.clientWidth > 0) {
+      useUIStore.getState().setStremioCatalogScrollPosition('recently-watched', el.scrollLeft);
+    }
+  }, [update]);
+
+  useEffect(() => {
+    if (stremioView !== 'home') return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const saved = useUIStore.getState().stremioCatalogScrollPositions['recently-watched'];
+    if (typeof saved === 'number' && saved > 0) {
+      const timer = setTimeout(() => {
+        el.scrollLeft = saved;
+        update();
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [stremioView, history.length, update]);
+
+  useEffect(() => {
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [update, history.length]);
+
+  const scroll = (dir: 'left' | 'right') => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const amount = el.clientWidth * 0.75;
+    el.scrollTo({ left: el.scrollLeft + (dir === 'left' ? -amount : amount), behavior: 'smooth' });
+  };
+
+  const handleItemClick = useCallback(async (entry: StremioWatchEntry) => {
+    if (loadingId) return;
+    setLoadingId(entry.metaId);
+    try {
+      const meta = await fetchMeta(addons, entry.type, entry.metaId);
+      if (meta) {
+        if (entry.type === 'series') {
+          const targetSeason = entry.nextSeason != null ? entry.nextSeason : entry.lastSeason;
+          if (targetSeason != null) {
+            setSelectedSeason(targetSeason);
+          }
+          const targetVideoId = entry.nextVideoId || entry.lastWatchedVideoId;
+          if (targetVideoId) {
+            setPreselectVideoId(targetVideoId);
+          }
+        }
+        onItemClick(meta);
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setLoadingId(null);
+    }
+  }, [addons, onItemClick, loadingId, setSelectedSeason, setPreselectVideoId]);
+
+  const { onCardMouseEnter, onCardMouseLeave, onCardClick } = useStremioHover();
+
+  if (history.length === 0) return null;
+
+  return (
+    <section className="stremio-row stremio-rw-row">
+      <div className="stremio-row-header">
+        <h3 className="stremio-row-title stremio-rw-title">
+          <svg className="stremio-rw-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          {i18n.t('stremio:continueWatching')}
+        </h3>
+        <div className="stremio-row-nav">
+          <button className="stremio-row-nav-btn" onClick={() => scroll('left')} disabled={!canScrollLeft}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <button className="stremio-row-nav-btn" onClick={() => scroll('right')} disabled={!canScrollRight}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="stremio-row-scroll-wrapper" style={{ position: 'relative' }}>
+        <div className="stremio-row-scroll" ref={scrollRef} onScroll={handleScroll}>
+          <div className="stremio-row-track">
+            {history.map((entry) => {
+              const isLoading = loadingId === entry.metaId;
+              const isSeries = entry.type === 'series';
+              const hasNext = isSeries && entry.nextVideoId != null;
+              const progressPercent = Math.round(entry.progressFraction * 100);
+              const showProgress = !hasNext && progressPercent > 2 && progressPercent < 98;
+
+              // Badge: "▶ S2 E5" for next, or "S2 E4" for continue
+              let badge: string | null = null;
+              if (isSeries && hasNext && entry.nextSeason != null && entry.nextEpisode != null) {
+                badge = `▶ S${entry.nextSeason} E${entry.nextEpisode}`;
+              } else if (isSeries && entry.lastSeason != null && entry.lastEpisode != null) {
+                badge = `S${entry.lastSeason} E${entry.lastEpisode}`;
+              }
+
+              return (
+                <div
+                  key={entry.metaId}
+                  className={`stremio-row-card stremio-rw-card${isLoading ? ' stremio-rw-card--loading' : ''}`}
+                  onMouseEnter={(e) => {
+                    const previewItem: StremioMetaPreview = {
+                      id: entry.metaId,
+                      type: entry.type,
+                      name: entry.name,
+                      poster: entry.poster || undefined,
+                    };
+                    onCardMouseEnter(previewItem, e.currentTarget, e);
+                  }}
+                  onMouseLeave={onCardMouseLeave}
+                  onClick={() => {
+                    onCardClick();
+                    handleItemClick(entry);
+                  }}
+                >
+                  {/* Remove button */}
+                  <button
+                    className="stremio-rw-remove-btn"
+                    title={i18n.t('stremio:removeFromContinueWatching')}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      dismissFromContinueWatching(entry.metaId, entry.type);
+                    }}
+                  >
+                    ✕
+                  </button>
+
+                  {/* Poster */}
+                  <div className="stremio-rw-poster-wrap">
+                    {entry.poster ? (
+                      <img
+                        className="stremio-row-poster"
+                        src={entry.poster}
+                        alt={entry.name}
+                        loading="lazy"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                      />
+                    ) : (
+                      <div className="stremio-rw-poster-placeholder">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                          <rect x="2" y="2" width="20" height="20" rx="2" />
+                          <circle cx="8.5" cy="8.5" r="1.5" />
+                          <path d="M21 15l-5-5L5 21" />
+                        </svg>
+                      </div>
+                    )}
+
+                    {/* Play overlay button */}
+                    {!isLoading && (
+                      <button
+                        className="stremio-rw-play-overlay-btn"
+                        title={i18n.t('stremio:playName', { name: entry.name })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleItemClick(entry);
+                        }}
+                      >
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="stremio-rw-play-icon">
+                          <path d="M8 5v14l11-7z" />
+                        </svg>
+                      </button>
+                    )}
+
+                    {/* Progress bar */}
+                    {showProgress && (
+                      <div className="stremio-rw-progress-track">
+                        <div
+                          className="stremio-rw-progress-fill"
+                          style={{ width: `${progressPercent}%` }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Episode / Next badge */}
+                    {badge && (
+                      <div className={`stremio-rw-ep-badge${hasNext ? ' stremio-rw-ep-badge--next' : ''}`}>
+                        {badge}
+                      </div>
+                    )}
+
+                    {/* Loading spinner */}
+                    {isLoading && (
+                      <div className="stremio-rw-loading-overlay">
+                        <div className="stremio-spinner" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Info */}
+                  <div className="stremio-row-card-info">
+                    <div className="stremio-row-card-title">{entry.name}</div>
+                    {hasNext ? (
+                      <div className="stremio-rw-card-sub stremio-rw-card-sub--next">{i18n.t('stremio:nextEpisode')}</div>
+                    ) : (
+                      showProgress && (
+                        <div className="stremio-rw-card-sub">{i18n.t('stremio:percentWatched', { percent: progressPercent })}</div>
+                      )
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        {canScrollLeft && <div className="stremio-row-fade stremio-row-fade-left" />}
+        {canScrollRight && <div className="stremio-row-fade stremio-row-fade-right" />}
+      </div>
+    </section>
+  );
+}

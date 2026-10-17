@@ -1,0 +1,1302 @@
+/* Now Playing Bar - cable box style, two-row layout
+   (per-version --npb-* tokens from ModernV2/ModernV3) */
+.now-playing-bar {
+  position: absolute;
+  bottom: var(--npb-bar-bottom, 0);
+  left: var(--npb-bar-left, 0);
+  right: var(--npb-bar-right, 0);
+  background: var(--npb-bar-bg, rgba(10, 10, 10, 0.92));
+  backdrop-filter: var(--npb-bar-filter, blur(20px));
+  -webkit-backdrop-filter: var(--npb-bar-filter, blur(20px));
+  border: var(--npb-bar-border, none);
+  border-top: var(--npb-bar-border-top, 1px solid rgba(255, 255, 255, 0.08));
+  border-radius: var(--npb-bar-radius, 0);
+  padding: var(--npb-bar-padding, 10px 16px);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: var(--npb-bar-shadow, none);
+  transition: var(--npb-bar-transition, transform 0.3s ease, opacity 0.3s ease);
+  z-index: 50;
+  /* Ensure padding is included in width so the bar never overflows
+     its containing block and get clipped by ancestor overflow:hidden */
+  box-sizing: border-box;
+}
+
+.now-playing-bar.hidden {
+  transform: var(--npb-bar-hidden-transform, translateY(100%));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.now-playing-bar.visible {
+  transform: var(--npb-bar-visible-transform, translateY(0));
+  opacity: 1;
+}
+
+/* Overlay slot — positioned above the bar */
+.npb-overlay-slot {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: var(--npb-overlay-margin-bottom, 6px);
+  padding-right: var(--npb-overlay-padding-right, 16px);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.npb-overlay-slot > * {
+  pointer-events: auto;
+}
+
+/* Row container */
+.npb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Row 1: Info row */
+.npb-info-row {
+  align-items: stretch;
+  /* Make children same height for divider */
+  min-height: 38px;
+}
+
+/* Channel section - fixed width, left side */
+.npb-channel-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 180px;
+  max-width: 280px;
+}
+
+.npb-channel-logo {
+  width: var(--npb-logo-w, 36px);
+  height: var(--npb-logo-h, 36px);
+  object-fit: contain;
+  border-radius: var(--npb-logo-radius, 4px);
+  background: var(--npb-logo-bg, rgba(255, 255, 255, 0.05));
+  border: var(--npb-logo-border, none);
+  box-shadow: var(--npb-logo-shadow, none);
+  flex-shrink: 0;
+}
+
+.npb-channel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
+}
+
+/* Metadata badge in NowPlayingBar */
+.npb-channel-text .metadata-badge {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.npb-channel-text .metadata-badge.detailed {
+  font-size: 0.7rem;
+  gap: 6px;
+}
+
+.npb-channel-text .metadata-badge .quality,
+.npb-channel-text .metadata-badge .fps,
+.npb-channel-text .metadata-badge .audio {
+  padding: 1px 5px;
+  font-size: 0.65rem;
+}
+
+.npb-channel-name {
+  font-size: var(--npb-name-font-size, 0.85rem);
+  font-weight: var(--npb-name-font-weight, 600);
+  color: var(--npb-name-color, rgba(255, 255, 255, 0.95));
+  letter-spacing: var(--npb-name-letter-spacing, normal);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.npb-program-title {
+  font-size: var(--npb-title-font-size, 0.78rem);
+  font-weight: var(--npb-title-font-weight, 500);
+  color: var(--npb-title-color, rgba(255, 255, 255, 0.65));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+
+.npb-no-program {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.3);
+  font-style: italic;
+}
+
+.npb-vod-year {
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Playlist indicator — active queue context in the Now Playing bar */
+.npb-playlist-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 2px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* In the clean (default) design the indicator is a compact row above the seekbar */
+.npb-clean-layout .npb-playlist-info {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.npb-playlist-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: rgba(147, 197, 253, 0.95);
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.npb-playlist-badge svg {
+  flex-shrink: 0;
+}
+
+.npb-playlist-pos {
+  opacity: 0.7;
+}
+
+.npb-playlist-shuffle {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.npb-next-up {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Soft vertical divider with faded top/bottom */
+.npb-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 0 4px;
+  background: var(--npb-divider-bg, linear-gradient(to bottom,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 20%,
+      rgba(255, 255, 255, 0.2) 80%,
+      transparent 100%));
+}
+
+/* Description section - fills remaining space, allows wrapping */
+.npb-description-section {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.npb-program-desc {
+  font-size: 0.75rem;
+  color: var(--npb-desc-color, rgba(255, 255, 255, 0.5));
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: default;
+}
+
+/* Row 2: Controls row */
+.npb-controls-row {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Progress section - takes remaining space */
+.npb-progress-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  min-height: 40px;
+}
+
+.npb-progress-bar {
+  flex: 1;
+  height: var(--npb-prog-height, 3px);
+  background: var(--npb-prog-bg, rgba(255, 255, 255, 0.1));
+  border-radius: var(--npb-prog-radius, 2px);
+  box-shadow: var(--npb-prog-shadow, none);
+  overflow: hidden;
+}
+
+.npb-progress-fill {
+  height: 100%;
+  background: var(--npb-prog-fill-bg, var(--accent-primary, #00d4ff));
+  border-radius: var(--npb-prog-fill-radius, 2px);
+  box-shadow: var(--npb-prog-fill-shadow, none);
+  transition: width 0.5s ease;
+}
+
+/* VOD progress section */
+.npb-progress-vod {
+  gap: 12px;
+}
+
+.npb-time-elapsed {
+  font-size: 0.7rem;
+  color: var(--npb-elapsed-color, rgba(255, 255, 255, 0.7));
+  white-space: nowrap;
+  min-width: 50px;
+  text-align: left;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Interactive progress bar for VOD */
+.npb-progress-interactive {
+  cursor: pointer;
+  position: relative;
+  height: var(--npb-prog-interactive-height, 3px);
+  border-radius: var(--npb-prog-interactive-radius, 0);
+  transition: height 0.15s ease;
+}
+
+.npb-progress-interactive.active {
+  height: var(--npb-prog-interactive-active-height, 6px);
+}
+
+.npb-progress-interactive .npb-progress-fill {
+  transition: width 0.1s ease;
+}
+
+/* Scrubber handle */
+.npb-scrubber-handle {
+  position: absolute;
+  top: 50%;
+  width: var(--npb-scrub-w, 12px);
+  height: var(--npb-scrub-h, 12px);
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  box-shadow: var(--npb-scrub-shadow, 0 1px 4px rgba(0, 0, 0, 0.3));
+  transition: var(--npb-scrub-transition, transform 0.15s ease);
+  pointer-events: none;
+}
+
+.npb-progress-interactive:hover .npb-scrubber-handle,
+.npb-progress-interactive.active .npb-scrubber-handle {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.npb-scrubber-handle.dragging {
+  transform: translate(-50%, -50%) scale(1.2);
+}
+
+/* Time tooltip */
+.npb-time-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  background: var(--npb-tooltip-bg, rgba(20, 20, 20, 0.95));
+  border: var(--npb-tooltip-border, none);
+  backdrop-filter: var(--npb-tooltip-filter, none);
+  -webkit-backdrop-filter: var(--npb-tooltip-filter, none);
+  color: var(--npb-tooltip-color, white);
+  padding: 4px 8px;
+  border-radius: var(--npb-tooltip-radius, 4px);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: var(--npb-tooltip-shadow, 0 2px 8px rgba(0, 0, 0, 0.3));
+}
+
+.npb-time-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--npb-tooltip-bg, rgba(20, 20, 20, 0.95));
+}
+
+.npb-time-remaining {
+  font-size: 0.7rem;
+  color: var(--npb-remaining-color, rgba(255, 255, 255, 0.5));
+  white-space: nowrap;
+  min-width: 65px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Playback controls */
+.npb-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-shrink: 0;
+}
+
+/* Extra controls group - add left margin to separate from play/stop */
+.npb-extra-controls {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--npb-extra-border-left-color, rgba(255, 255, 255, 0.1));
+}
+
+/* Aspect ratio controls */
+.npb-aspect-controls {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid var(--npb-extra-border-left-color, rgba(255, 255, 255, 0.1));
+  position: relative;
+}
+
+.npb-aspect-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: var(--npb-menu-bg, rgba(20, 20, 20, 0.95));
+  backdrop-filter: var(--npb-menu-filter, none);
+  -webkit-backdrop-filter: var(--npb-menu-filter, none);
+  border: var(--npb-menu-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: var(--npb-menu-radius, 8px);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 100px;
+  z-index: 100;
+  box-shadow: var(--npb-menu-shadow, 0 4px 16px rgba(0, 0, 0, 0.4));
+}
+
+.npb-visualizer-menu {
+  min-width: 170px;
+}
+
+.npb-menu-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #06b6d4;
+  padding: 4px 10px 2px;
+}
+
+.npb-aspect-item {
+  background: none;
+  border: none;
+  color: var(--npb-menu-item-color, rgba(255, 255, 255, 0.8));
+  padding: 6px 10px;
+  border-radius: var(--npb-menu-item-radius, 4px);
+  cursor: pointer;
+  font-size: 0.8rem;
+  text-align: left;
+  transition: var(--npb-menu-item-transition, all 0.15s);
+}
+
+.npb-aspect-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.npb-aspect-item.active {
+  background: var(--npb-menu-item-active-bg, rgba(0, 212, 255, 0.15));
+  color: var(--npb-menu-item-active-color, #00d4ff);
+  font-weight: 600;
+}
+
+.npb-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: var(--npb-btn-bg, rgba(255, 255, 255, 0.08));
+  border: var(--npb-btn-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: var(--npb-btn-radius, 6px);
+  color: var(--npb-btn-color, rgba(255, 255, 255, 0.9));
+  box-shadow: var(--npb-btn-shadow, none);
+  cursor: pointer;
+  transition: var(--npb-btn-transition, all 0.15s ease);
+}
+
+.npb-btn:hover:not(:disabled) {
+  background: var(--npb-btn-hover-bg, rgba(255, 255, 255, 0.15));
+  border-color: var(--npb-btn-hover-border-color, rgba(255, 255, 255, 0.2));
+  color: var(--npb-btn-hover-color, var(--npb-btn-color, rgba(255, 255, 255, 0.9)));
+  transform: var(--npb-btn-hover-transform, none);
+  box-shadow: var(--npb-btn-hover-shadow, none);
+}
+
+.npb-btn:active:not(:disabled) {
+  transform: var(--npb-btn-active-transform, scale(0.95));
+  box-shadow: var(--npb-btn-active-shadow, none);
+}
+
+.npb-btn:disabled {
+  opacity: var(--npb-btn-disabled-opacity, 0.3);
+  cursor: not-allowed;
+}
+
+.npb-btn.has-badge,
+.npb-clean-btn.has-badge {
+  position: relative;
+}
+
+.npb-btn.has-badge::after,
+.npb-clean-btn.has-badge::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background-color: #3b82f6;
+  border: 1.5px solid #141414;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(59, 130, 246, 0.8);
+}
+
+/* Volume controls */
+.npb-volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.npb-volume-btn {
+  width: 32px;
+  height: 32px;
+}
+
+.npb-volume-slider {
+  width: 70px;
+  height: var(--npb-vol-height, 3px);
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--npb-vol-bg, rgba(255, 255, 255, 0.15));
+  border-radius: var(--npb-vol-radius, 2px);
+  box-shadow: var(--npb-vol-shadow, none);
+  cursor: pointer;
+}
+
+.npb-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--npb-vol-thumb-w, 10px);
+  height: var(--npb-vol-thumb-h, 10px);
+  background: white;
+  border-radius: 50%;
+  box-shadow: var(--npb-vol-thumb-shadow, none);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.npb-volume-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.npb-volume-slider::-moz-range-thumb {
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.npb-volume-slider:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.npb-volume-value {
+  font-size: 0.7rem;
+  color: var(--npb-vol-value-color, rgba(255, 255, 255, 0.5));
+  min-width: 22px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Empty state */
+.npb-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.npb-empty-state span {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}
+
+/* Responsive adjustments */
+@media (max-width: 700px) {
+  .now-playing-bar {
+    padding: 8px 12px;
+    gap: 6px;
+  }
+
+  .npb-channel-section {
+    min-width: 140px;
+    max-width: 200px;
+  }
+
+  .npb-channel-logo {
+    width: 30px;
+    height: 30px;
+  }
+
+  .npb-description-section {
+    display: none;
+  }
+
+  .npb-divider {
+    display: none;
+  }
+
+  .npb-volume-slider {
+    width: 50px;
+  }
+
+  .npb-volume-value {
+    display: none;
+  }
+}
+
+@media (max-width: 450px) {
+  .npb-channel-logo {
+    display: none;
+  }
+
+  .npb-channel-section {
+    min-width: 100px;
+    max-width: 150px;
+  }
+
+  .npb-time-remaining {
+    display: none;
+  }
+}
+
+.npb-empty-state-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+}
+
+.npb-empty-state-text {
+  display: flex;
+  align-items: center;
+}
+
+.npb-empty-state-text span {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}
+
+.npb-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Quick Record Modal */
+.npb-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.npb-modal {
+  background: var(--npb-modal-bg, var(--surface-color, #1a1a1a));
+  border: var(--npb-modal-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: var(--npb-modal-radius, 12px);
+  width: 90%;
+  max-width: 400px;
+  box-shadow: var(--npb-modal-shadow, 0 8px 32px rgba(0, 0, 0, 0.4));
+}
+
+.npb-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--npb-modal-header-bg, transparent);
+}
+
+.npb-modal-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.npb-modal-close {
+  background: var(--npb-modal-close-bg, none);
+  border: var(--npb-modal-close-border, none);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--npb-modal-close-radius, 4px);
+  transition: var(--npb-modal-close-transition, all 0.15s ease);
+}
+
+.npb-modal-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.npb-modal-body {
+  padding: 20px;
+}
+
+.npb-modal-body p {
+  margin: 0 0 12px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+}
+
+.npb-modal-body p strong {
+  color: var(--text-primary, #fff);
+  font-weight: 600;
+}
+
+.npb-form-group {
+  margin-top: 16px;
+}
+
+.npb-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* "Record until Stop" checkbox row in the Quick Record modal */
+.npb-form-group label.npb-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+  cursor: pointer;
+  color: var(--text-primary, #fff);
+}
+
+.npb-form-group label.npb-checkbox-label input[type="checkbox"] {
+  width: auto;
+  flex-shrink: 0;
+  accent-color: var(--accent-color, #007acc);
+}
+
+.npb-form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--npb-modal-input-bg, rgba(255, 255, 255, 0.05));
+  border: var(--npb-modal-input-border, 1px solid rgba(255, 255, 255, 0.1));
+  border-radius: var(--npb-modal-input-radius, 6px);
+  color: var(--text-primary, #fff);
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: var(--npb-modal-input-transition, none);
+}
+
+.npb-form-group input:focus {
+  outline: none;
+  border-color: var(--npb-modal-input-focus-border, var(--accent-color, #007acc));
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: var(--npb-modal-input-focus-shadow, none);
+}
+
+.npb-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--npb-modal-footer-bg, transparent);
+}
+
+.npb-modal-footer .npb-btn {
+  width: auto;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+}
+
+.npb-modal-footer .npb-btn.secondary {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.npb-modal-footer .npb-btn.secondary:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.npb-modal-footer .npb-btn.primary {
+  background: var(--npb-modal-primary-bg, var(--accent-color, #007acc));
+  border: 1px solid var(--accent-color, #007acc);
+  box-shadow: var(--npb-modal-primary-shadow, none);
+}
+
+.npb-modal-footer .npb-btn.primary:hover {
+  background: var(--accent-hover, #005fa3);
+  border-color: var(--accent-hover, #005fa3);
+  transform: var(--npb-modal-primary-hover-transform, none);
+  box-shadow: var(--npb-modal-primary-hover-shadow, none);
+}
+
+/* ─── TimeShift Scrubber ─────────────────────────────────────── */
+
+/* Container for timeshift scrubber */
+.npb-ts-container {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+/* The timeshift scrubber bar - infinite style like YouTube Live */
+.npb-ts-scrubber {
+  position: relative;
+  height: var(--npb-ts-height, 8px);
+  background: var(--npb-ts-bg, rgba(255, 255, 255, 0.15));
+  border-radius: var(--npb-ts-radius, 4px);
+  box-shadow: var(--npb-ts-shadow, none);
+  cursor: pointer;
+  overflow: visible;
+  transition: height 0.15s ease;
+}
+
+.npb-ts-scrubber:hover {
+  height: var(--npb-ts-hover-height, 10px);
+}
+
+/* Fill showing progress within cache window */
+.npb-ts-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: var(--npb-ts-fill-bg, var(--accent-primary, #00d4ff));
+  border-radius: var(--npb-ts-fill-radius, 4px);
+  box-shadow: var(--npb-ts-fill-shadow, none);
+  transition: width 0.1s linear;
+}
+
+/* Scrubber handle - always visible for TimeShift */
+.npb-ts-handle {
+  position: absolute;
+  top: 50%;
+  width: var(--npb-ts-handle-w, 14px);
+  height: var(--npb-ts-handle-h, 14px);
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: var(--npb-ts-handle-shadow, 0 2px 6px rgba(0, 0, 0, 0.4));
+  pointer-events: none;
+  z-index: 2;
+}
+
+.npb-ts-scrubber:hover .npb-ts-handle {
+  transform: translate(-50%, -50%) scale(1.1);
+}
+
+/* Meta row below the timeshift scrubber bar */
+.npb-timeshift-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0;
+  font-size: 0.75rem;
+}
+
+.npb-timeshift-window {
+  color: var(--npb-ts-window-color, rgba(255, 255, 255, 0.45));
+  flex-shrink: 0;
+}
+
+.npb-live-badge {
+  color: var(--npb-live-badge-color, #ff4040);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.03em;
+  margin-left: auto;
+  text-shadow: var(--npb-live-badge-shadow, none);
+}
+
+.npb-behind-live {
+  color: var(--npb-behind-live-color, #ffffff);
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+/* Live edge marker (right red line at 100%) */
+.npb-live-edge-marker {
+  position: absolute;
+  right: 0;
+  top: -3px;
+  width: 2px;
+  height: calc(100% + 6px);
+  background: var(--npb-live-edge-bg, #ff4040);
+  border-radius: 2px;
+  box-shadow: var(--npb-live-edge-shadow, none);
+  pointer-events: none;
+}
+
+/* Mode toggle buttons (TimeShift ↔ EPG Catchup) */
+.npb-scrub-mode-btn {
+  padding: 3px 10px;
+  border-radius: var(--npb-scrub-radius, 6px);
+  border: 1px solid var(--npb-scrub-border-color, rgba(0, 212, 255, 0.35));
+  background: var(--npb-scrub-bg, rgba(0, 212, 255, 0.08));
+  color: var(--npb-scrub-color, rgba(0, 212, 255, 0.85));
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.npb-scrub-mode-btn:hover {
+  background: var(--npb-scrub-hover-bg, rgba(0, 212, 255, 0.18));
+  border-color: var(--npb-scrub-hover-border-color, rgba(0, 212, 255, 0.6));
+  color: var(--npb-scrub-hover-color, #00d4ff);
+  transform: var(--npb-scrub-hover-transform, none);
+}
+
+.npb-scrub-mode-btn--back {
+  border-color: var(--npb-scrub-back-border-color, rgba(160, 120, 255, 0.35));
+  background: var(--npb-scrub-back-bg, rgba(160, 120, 255, 0.08));
+  color: var(--npb-scrub-back-color, rgba(160, 120, 255, 0.85));
+}
+
+.npb-scrub-mode-btn--back:hover {
+  background: var(--npb-scrub-back-hover-bg, rgba(160, 120, 255, 0.18));
+  border-color: var(--npb-scrub-back-hover-border-color, rgba(160, 120, 255, 0.6));
+  color: var(--npb-scrub-back-hover-color, #b08fff);
+  transform: var(--npb-scrub-back-hover-transform, none);
+}
+
+/* Go Live / Catch Up button */
+.npb-live-btn {
+  padding: 4px 12px;
+  border-radius: var(--npb-livebtn-radius, 6px);
+  border: var(--npb-livebtn-border, 1px solid rgba(255, 64, 64, 0.4));
+  background: var(--npb-livebtn-bg, rgba(255, 64, 64, 0.12));
+  color: var(--npb-livebtn-color, #ff6060);
+  box-shadow: var(--npb-livebtn-shadow, none);
+  font-size: 0.78rem;
+  font-weight: var(--npb-livebtn-font-weight, 600);
+  letter-spacing: var(--npb-livebtn-letter-spacing, normal);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: var(--npb-livebtn-transition, all 0.15s);
+}
+
+.npb-live-btn:hover {
+  background: rgba(255, 64, 64, 0.25);
+  border-color: rgba(255, 64, 64, 0.7);
+  color: #ff8080;
+  transform: var(--npb-livebtn-hover-transform, none);
+  box-shadow: var(--npb-livebtn-hover-shadow, none);
+}
+
+/* Playback Speed Controls */
+.npb-speed-controls {
+  margin-left: 8px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.npb-speed-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  min-width: 40px;
+  width: auto;
+  padding: 0 8px;
+}
+
+.npb-speed-menu {
+  min-width: 75px;
+}
+
+
+/* ==========================================================================
+   CLEAN / BORDERLESS MEDIA CONTROL DESIGN
+   ========================================================================== */
+/* Overrides for v3 UI, modern UI, and default UI themes to apply smooth fading darkening gradient without borders or card boxes */
+html.modern-ui-v3 .now-playing-bar.clean-design,
+.modern-ui .now-playing-bar.clean-design,
+.now-playing-bar.clean-design {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  border-radius: 0 !important;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.55) 55%, rgba(0, 0, 0, 0) 100%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border: none !important;
+  border-top: none !important;
+  box-shadow: none !important;
+  padding: 16px 24px 20px 24px !important;
+  box-sizing: border-box;
+}
+
+html.modern-ui-v3 .now-playing-bar.clean-design::before,
+html.modern-ui-v3 .now-playing-bar.clean-design::after,
+.modern-ui .now-playing-bar.clean-design::before,
+.modern-ui .now-playing-bar.clean-design::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Ensure failover group overlay slot floats cleanly above top edge of clean bar */
+.now-playing-bar.clean-design .npb-overlay-slot {
+  position: absolute;
+  bottom: 100%;
+  right: 24px;
+  margin-bottom: 14px;
+  z-index: 1000;
+}
+
+.npb-clean-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+/* Top full-width seekbar row */
+.npb-clean-seekbar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.npb-clean-seekbar-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.npb-clean-time-elapsed,
+.npb-clean-time-remaining {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  min-width: 42px;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.npb-clean-time-elapsed {
+  text-align: left;
+}
+
+.npb-clean-time-remaining {
+  text-align: right;
+}
+
+.npb-clean-behind-live-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.npb-clean-live-btn {
+  background: rgba(255, 255, 255, 0.12) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.npb-clean-live-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.npb-clean-behind-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.npb-clean-live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.npb-clean-live-dot {
+  width: 6px;
+  height: 6px;
+  background-color: #ff4444;
+  border-radius: 50%;
+  box-shadow: 0 0 6px #ff4444;
+}
+
+.npb-clean-progressbar {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 2px;
+  cursor: pointer;
+  border: none;
+}
+
+.npb-clean-progress-fill {
+  height: 100%;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.npb-clean-scrubber-handle {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Bottom controls row */
+.npb-clean-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  position: relative;
+}
+
+.npb-clean-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.npb-clean-center {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.npb-clean-sm-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.75);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+  outline: none;
+}
+
+.npb-clean-sm-btn:hover {
+  color: #ffffff;
+  background: transparent !important;
+  border: none !important;
+  transform: scale(1.18);
+}
+
+.npb-clean-sm-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.npb-clean-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.npb-clean-right > div {
+  display: flex;
+  align-items: center;
+}
+
+/* Clean buttons - NO background, NO border, pure SVGs */
+.npb-clean-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: rgba(255, 255, 255, 0.85);
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, transform 0.15s ease;
+  outline: none;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.npb-clean-btn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+  flex-shrink: 0;
+}
+
+.npb-clean-btn:hover {
+  color: #ffffff;
+  background: transparent !important;
+  border: none !important;
+  transform: scale(1.12);
+}
+
+/* Center circular play/pause button */
+.npb-clean-play-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5) !important;
+  background: rgba(0, 0, 0, 0.25) !important;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+  box-shadow: none !important;
+}
+
+.npb-clean-play-btn:hover {
+  border-color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.18) !important;
+  transform: scale(1.08);
+}
+
+/* Clean DVR button */
+.npb-clean-dvr-btn {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 0.15s ease;
+}
+
+.npb-clean-dvr-btn:hover {
+  color: #ffffff;
+}
+
+.npb-clean-dvr-dash {
+  font-weight: 400;
+}
+
+/* Volume range slider in clean mode */
+.npb-clean-volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 70px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.npb-clean-volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.npb-clean-volume-value {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.75);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  min-width: 26px;
+  text-align: left;
+  white-space: nowrap;
+}
+

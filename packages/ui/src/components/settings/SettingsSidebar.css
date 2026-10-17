@@ -1,0 +1,83 @@
+.settings-sidebar {
+  width: 140px;
+  min-width: 140px;
+  background: var(--stg-sidebar-bg, var(--bg-secondary, #1a1a1a));
+  border-right: var(--stg-sidebar-border-right, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  position: relative;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.settings-sidebar::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--bg-primary, #0f0f0f);
+  z-index: -1;
+  display: var(--stg-sidebar-before-display, block);
+}
+
+.settings-sidebar:hover {
+  scrollbar-color: var(--scrollbar-hover-color, var(--accent-primary, rgba(0, 212, 255, 0.5))) transparent;
+}
+
+.settings-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.settings-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 3px;
+}
+
+.settings-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, rgba(0, 212, 255, 0.5)));
+}
+
+.settings-nav {
+  flex: 1;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 5px 16px;
+  background: transparent;
+  border: var(--stg-nav-border, none);
+  border-radius: 8px;
+  text-align: left;
+  color: var(--stg-nav-color, var(--text-secondary, rgba(255, 255, 255, 0.6)));
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: var(--stg-nav-transition, all 0.15s ease);
+}
+
+.settings-nav-item:hover {
+  background: var(--stg-nav-hover-bg, var(--bg-hover, rgba(255, 255, 255, 0.08)));
+  color: var(--stg-nav-hover-color, var(--text-primary, #fff));
+}
+
+.settings-nav-item.active {
+  background: var(--stg-nav-active-bg, var(--accent-primary, rgba(0, 212, 255, 0.5)));
+  color: var(--stg-nav-active-color, white);
+  font-weight: var(--stg-nav-active-weight, 500);
+  border: var(--stg-nav-active-border, none);
+  box-shadow: var(--stg-nav-active-shadow, none);
+}

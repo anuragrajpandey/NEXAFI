@@ -1,0 +1,406 @@
+.media-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  border-radius: var(--vod-media-radius, 8px);
+  overflow: hidden;
+  background: var(--vod-media-bg, var(--surface-color, #141414));
+  border: var(--vod-media-border, none);
+  transition: var(--vod-media-transition, transform 0.2s ease, box-shadow 0.2s ease);
+  flex-shrink: 0;
+}
+
+.media-card:hover {
+  transform: var(--vod-media-hover-transform, scale(1.05));
+  box-shadow: var(--vod-media-hover-shadow, 0 8px 24px rgba(0, 0, 0, 0.5));
+  border-color: var(--vod-media-hover-border, transparent);
+  z-index: 10;
+}
+
+.media-card:focus-visible {
+  transform: scale(1.05);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 10;
+}
+
+.media-card:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+/* Size variants - default widths */
+.media-card--small {
+  width: 120px;
+}
+
+.media-card--medium {
+  width: 160px;
+}
+
+.media-card--large {
+  width: 200px;
+}
+
+/* Dynamic sizing support - when card is inside a sized container */
+/* This allows VodBrowse grid to control card dimensions via CSS variables */
+.vod-browse__grid-item .media-card,
+.recent-view__grid-item .media-card {
+  width: 100% !important;
+  height: 100%;
+}
+
+/* Poster container */
+.media-card__poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2/3;
+  background: #0d0d0d;
+  overflow: hidden;
+}
+
+.media-card__poster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.media-card__poster img.loaded {
+  opacity: 1;
+}
+
+/* Placeholder when no image */
+.media-card__placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+}
+
+.media-card__placeholder span {
+  font-size: 3rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.15);
+  text-transform: uppercase;
+}
+
+/* Hover overlay */
+.media-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.media-card:hover .media-card__overlay,
+.media-card:focus-visible .media-card__overlay {
+  opacity: 1;
+}
+
+.media-card__play-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  backdrop-filter: blur(4px);
+}
+
+.media-card__play-icon--playable {
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.media-card__play-icon--playable:hover {
+  transform: scale(1.18);
+  background: rgba(229, 9, 20, 0.95);
+  box-shadow: 0 4px 16px rgba(229, 9, 20, 0.5);
+  color: #ffffff;
+}
+
+.media-card__play-icon svg {
+  width: 20px;
+  height: 20px;
+  margin-left: 2px; /* Visual centering for play icon */
+}
+
+/* Progress bar */
+.media-card__progress-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.2);
+  z-index: 5;
+}
+
+.media-card__progress-bar {
+  height: 100%;
+  background: #e50914; /* Netflix red */
+  transition: width 0.3s ease;
+}
+
+/* Episode info badge for series */
+.media-card__episode-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 4px 8px;
+  background: rgba(229, 9, 20, 0.9); /* Netflix red */
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  z-index: 15;
+  letter-spacing: 0.5px;
+}
+
+/* Remove button for recently watched */
+.media-card__remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease;
+  z-index: 20;
+  padding: 0;
+}
+
+.media-card:hover .media-card__remove-btn,
+.media-card:focus-visible .media-card__remove-btn {
+  opacity: 1;
+}
+
+.media-card__remove-btn:hover {
+  background: rgba(229, 9, 20, 0.8);
+}
+
+.media-card__remove-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Favorite button on poster */
+.media-card__fav-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+  z-index: 20;
+  padding: 0;
+  backdrop-filter: blur(4px);
+}
+
+.media-card:hover .media-card__fav-btn:not(.favorited),
+.media-card:focus-visible .media-card__fav-btn:not(.favorited) {
+  opacity: 1;
+}
+
+.media-card__fav-btn.favorited {
+  opacity: 1;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.media-card__fav-btn:hover {
+  transform: scale(1.15);
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.media-card__fav-btn.favorited:hover {
+  background: rgba(239, 68, 68, 0.35);
+}
+
+.media-card__fav-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Info section - compact and polished */
+.media-card__info {
+  height: 32px;
+  padding: 4px 8px 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.media-card__title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+  margin: 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-card__title-inner {
+  display: inline-block;
+}
+
+/* Marquee scroll animation - only for titles that overflow */
+/* Uses CSS custom property --marquee-visible-width which should match card width */
+.media-card:hover .media-card__title--overflow,
+.media-card:focus-visible .media-card__title--overflow {
+  overflow: visible;
+}
+
+.media-card:hover .media-card__title--overflow .media-card__title-inner,
+.media-card:focus-visible .media-card__title--overflow .media-card__title-inner {
+  animation: marquee-scroll 3s ease-in-out forwards;
+  animation-delay: 0.3s;
+}
+
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  40% {
+    /* Scroll left to show the rest of the title, keeping last part visible */
+    transform: translateX(calc(-100% + var(--marquee-visible-width, 160px)));
+  }
+  60% {
+    /* Pause on the scrolled position */
+    transform: translateX(calc(-100% + var(--marquee-visible-width, 160px)));
+  }
+  100% {
+    /* Return to original position */
+    transform: translateX(0);
+  }
+}
+
+.media-card__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+}
+
+.media-card__year {
+  color: var(--text-muted, rgba(255, 255, 255, 0.55));
+  font-weight: 400;
+}
+
+.media-card__rating {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: #f5c518;
+}
+
+.media-card__rating svg {
+  fill: currentColor;
+  width: 10px;
+  height: 10px;
+}
+
+/* Small size adjustments */
+.media-card--small .media-card__info {
+  height: 30px;
+  padding: 4px 6px 2px;
+}
+
+.media-card--small .media-card__title {
+  font-size: 0.6875rem;
+}
+
+.media-card--small .media-card__meta {
+  font-size: 0.5625rem;
+}
+
+.media-card--small .media-card__placeholder span {
+  font-size: 2rem;
+}
+
+/* Large size adjustments */
+.media-card--large .media-card__info {
+  height: 36px;
+  padding: 6px 12px 4px;
+}
+
+.media-card--large .media-card__title {
+  font-size: 0.8125rem;
+}
+
+.media-card--large .media-card__meta {
+  font-size: 0.6875rem;
+}
+
+.media-card--large .media-card__placeholder span {
+  font-size: 4rem;
+}
+
+/* Source name badge */
+.media-card__source-badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  padding: 3px 6px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 600;
+  z-index: 15;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  max-width: 55%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: right 0.2s ease, left 0.2s ease;
+}
+
+.media-card__source-badge--right {
+  left: auto;
+  right: 4px;
+}
+
+/* Move source badge left when hover buttons (remove/fav) appear */
+.media-card:hover .media-card__source-badge--right,
+.media-card:focus-visible .media-card__source-badge--right {
+  right: 34px;
+}

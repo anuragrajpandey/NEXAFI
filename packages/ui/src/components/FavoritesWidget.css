@@ -1,0 +1,116 @@
+/* Favorites Widget — lives inside WidgetBar, no absolute positioning */
+.favorites-widget {
+  width: 340px;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.favorites-widget .favorites-header {
+  background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 10px 10px 0 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+}
+
+.favorites-widget .favorites-list {
+  background: rgba(0, 0, 0, var(--widget-bg-opacity, 0.55));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: 0 0 10px 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  /* Fixed height = 5 items × 32px + 4 gaps × 1px + 4px top + 4px bottom padding */
+  height: 172px;
+  overflow-y: scroll;
+  pointer-events: auto;
+}
+
+.favorite-channel-item {
+  padding: 5px 8px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.85);
+  transition: all 0.15s ease;
+  user-select: none;
+  pointer-events: auto;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.favorite-channel-item:hover {
+  background: rgba(251, 191, 36, 0.1);
+  color: #fbbf24;
+}
+
+.favorite-channel-item:active {
+  background: rgba(251, 191, 36, 0.2);
+}
+
+.favorite-channel-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.favorite-channel-program {
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Scrollbar styling for the list */
+.favorites-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.favorites-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.favorites-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .favorites-widget {
+    width: 260px;
+  }
+
+  .favorite-channel-item {
+    font-size: 0.78rem;
+    padding: 5px 8px;
+  }
+
+  .favorites-list {
+    height: 172px;
+  }
+}

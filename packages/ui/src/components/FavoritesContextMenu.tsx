@@ -1,0 +1,100 @@
+import { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../i18n';
+import './ProgramContextMenu.css';
+
+interface FavoritesContextMenuProps {
+    position: { x: number; y: number };
+    onClose: () => void;
+    onManageFavorites: () => void;
+    onHide?: () => void;
+}
+
+export function FavoritesContextMenu({
+    position,
+    onClose,
+    onManageFavorites,
+    onHide,
+}: FavoritesContextMenuProps) {
+    useTranslation();
+    const menuRef = useRef<HTMLDivElement>(null);
+    const [adjustedPosition, setAdjustedPosition] = useState(position);
+
+    // Dynamic Context Menu calculation
+    useLayoutEffect(() => {
+        if (menuRef.current) {
+            const menu = menuRef.current;
+            const menuWidth = menu.offsetWidth;
+            const menuHeight = menu.offsetHeight;
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            let x = position.x;
+            let y = position.y;
+
+            // Determine if click was in top or bottom half of the screen
+            const isBottomHalf = position.y > viewportHeight / 2;
+
+            // Pop UP if cursor is below 50% screen height
+            if (isBottomHalf) {
+                y = position.y - menuHeight;
+            }
+
+            // Prevent menu from going off right edge
+            if (x + menuWidth > viewportWidth) x = viewportWidth - menuWidth - 10;
+            if (x < 10) x = 10;
+
+            // Safety bounds for Y-axis
+            if (y + menuHeight > viewportHeight) y = viewportHeight - menuHeight - 10;
+            if (y < 10) y = 10;
+
+            setAdjustedPosition({ x, y });
+        }
+    }, [position]);
+
+    // Close on click outside (ignore clicks inside modals since they are rendered in portals)
+    useEffect(() => {
+        function isInsideModal(target: Node): boolean {
+            const el = target as HTMLElement;
+            return !!el.closest?.('.modal-overlay') || !!el.closest?.('.modal-container');
+        }
+        function handleClickOutside(e: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node) && !isInsideModal(e.target as Node)) {
+                onClose();
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onClose]);
+
+    // Close on escape
+    useEffect(() => {
+        function handleEscape(e: KeyboardEvent) {
+            if (e.key === 'Escape') onClose();
+        }
+        document.addEventListener('keydown', handleEscape);
+        return () => document.removeEventListener('keydown', handleEscape);
+    }, [onClose]);
+
+    return createPortal(
+        <div
+            ref={menuRef}
+            className="program-context-menu"
+            style={{ left: `${adjustedPosition.x}px`, top: `${adjustedPosition.y}px` }}
+        >
+            <div className="context-menu-header" style={{ padding: '8px 12px 4px', fontSize: '11px', opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                {i18n.t('common:favorites')}
+            </div>
+            <div className="context-menu-item" onClick={() => { onManageFavorites(); onClose(); }}>
+                ⭐ {i18n.t('contextMenu.manageFavorites')}
+            </div>
+            {onHide && (
+                <div className="context-menu-item" onClick={() => { onHide(); onClose(); }}>
+                    🚫 {i18n.t('contextMenu.hideCategory')}
+                </div>
+            )}
+        </div>,
+        document.body
+    );
+}

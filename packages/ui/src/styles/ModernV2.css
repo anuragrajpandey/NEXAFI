@@ -1,0 +1,785 @@
+/* ==========================================================================
+   MODERN THEME — V2 (applies to both V2 and V3 via .modern-ui)
+   Split from ModernTheme.css — see git history for the original monolith.
+   Loaded at runtime by src/utils/uiDesign.ts (applyUiDesign).
+   ========================================================================== */
+
+/* Modern Glass-Morphism UI Enhancement
+ * This file contains modern styling that can be toggled on/off via Settings
+ */
+/* ── V2 surface tokens ────────────────────────────────────────────────────
+   Component bases consume these so the v2 look is data, not an override
+   layer. V3 redefines the glass tokens (--strip-*, --glass-info-*,
+   --glass-grid-*, --guide-placeholder-*) in ModernV3.css; the guide-header
+   filter, preview-pane radius, and guide typography tokens are shared with
+   v3 unchanged. */
+.modern-ui {
+  --strip-bg: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-primary, rgba(10, 10, 15, 0.95)) 95%, transparent) 0%,
+    color-mix(in srgb, var(--bg-primary, rgba(10, 10, 15, 0.9)) 85%, transparent) 100%);
+  --strip-filter: blur(24px) saturate(180%);
+  --strip-border-right: 1px solid rgba(255, 255, 255, 0.1);
+  --strip-transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  --glass-info-bg: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-overlay, rgba(0, 0, 0, 0.95)), white 2%) 0%,
+    var(--bg-overlay, rgba(0, 0, 0, 0.95)) 100%);
+  --glass-info-filter: blur(var(--glass-blur, 24px)) saturate(180%);
+  --glass-grid-bg: linear-gradient(180deg,
+    color-mix(in srgb, var(--bg-overlay, rgba(0, 0, 0, 0.95)), white 1%) 0%,
+    var(--bg-overlay, rgba(0, 0, 0, 0.95)) 100%);
+  --guide-header-bg: linear-gradient(180deg,
+    color-mix(in srgb, var(--surface-color, rgba(20, 20, 20, 0.85)), white 3%) 0%,
+    var(--surface-color, rgba(20, 20, 20, 0.85)) 100%);
+  --guide-header-filter: blur(var(--glass-blur, 16px)) saturate(140%);
+  /* Time header — v2 gradient surface (v3 redefines to the subtle clean values) */
+  --guide-time-header-bg: linear-gradient(180deg,
+    color-mix(in srgb, var(--surface-color, rgba(0,0,0,0.3)), white 2%) 0%,
+    color-mix(in srgb, var(--surface-color, rgba(0,0,0,0.3)), white 1%) 100%);
+  --guide-time-header-border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  --guide-time-header-filter: blur(var(--glass-blur, 16px)) saturate(140%);
+  /* legacy WebKit alias — the old stacked rule 1 only set -webkit with blur(12px) */
+  --guide-time-header-filter-webkit: blur(var(--glass-blur, 12px));
+  --guide-time-spacer-border-right: 1px solid rgba(255, 255, 255, 0.05);
+  --glass-info-border-left: var(--glass-surface-border, 1px solid rgba(255, 255, 255, 0.04));
+  --glass-info-padding: 24px 28px;
+  --guide-preview-radius: 0 0 20px 0;
+  --guide-preview-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.04);
+  --guide-preview-video-radius: 0 0 16px 0;
+  --guide-placeholder-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--bg-primary, rgba(0, 0, 0, 0.5)), white 4%) 0%,
+    var(--bg-primary, rgba(0, 0, 0, 0.5)) 100%);
+  --guide-placeholder-filter: blur(var(--glass-blur, 20px)) saturate(150%);
+  --guide-placeholder-padding: 24px 36px;
+  --guide-placeholder-radius: var(--glass-feature-radius, 16px);
+  --guide-placeholder-border: 1px solid rgba(255, 255, 255, 0.08);
+  --guide-placeholder-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  --guide-placeholder-font-size: 1rem;
+  --guide-placeholder-font-weight: 500;
+  --guide-placeholder-color: rgba(255, 255, 255, 0.4);
+  --guide-placeholder-letter-spacing: 0.02em;
+  /* Guide typography — info-pane program details, time header, now-playing bar.
+     V3 shares these unchanged (no redefinition in ModernV3.css). */
+  --guide-title-font-size: var(--epg-title-font-size, 2.4rem);
+  --guide-title-font-weight: 800;
+  --guide-title-letter-spacing: -0.03em;
+  --guide-title-line-height: 1.1;
+  --guide-title-text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+  --guide-title-bg: linear-gradient(135deg, white 0%, rgba(255, 255, 255, 0.85) 100%);
+  --guide-title-bg-clip: text;
+  --guide-title-fill: transparent;
+  --guide-meta-margin-top: 12px;
+  --guide-meta-color: rgba(255, 255, 255, 0.6);
+  --guide-meta-font-size: 0.9rem;
+  --guide-meta-font-weight: 500;
+  --guide-desc-font-size: var(--epg-body-font-size, 1.05rem);
+  --guide-desc-line-height: 1.65;
+  --guide-desc-color: rgba(255, 255, 255, 0.65);
+  --guide-desc-margin-top: 16px;
+  --guide-desc-letter-spacing: 0.01em;
+  --guide-marker-font-size: 0.82rem;
+  --guide-marker-font-weight: 500;
+  --guide-marker-color: rgba(255, 255, 255, 0.5);
+  --guide-marker-padding-left: 14px;
+  --guide-marker-letter-spacing: 0.02em;
+  --guide-marker-first-weight: 600;
+  --guide-marker-first-color: rgba(255, 255, 255, 0.7);
+  --guide-clock-font-size: 1.6rem;
+  --guide-clock-letter-spacing: 0.02em;
+  --guide-clock-text-shadow: 0 0 20px color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --npb-title-font-size: 0.85rem;
+  --npb-title-font-weight: 500;
+  --npb-title-color: rgba(255, 255, 255, 0.7);
+  /* Guide header buttons — manage/refresh/epg-shift share a look, nav/close another,
+     the "now" button is unique. V3 redefines these to its pill buttons. */
+  --guide-btn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --guide-btn-border: 1px solid rgba(255, 255, 255, 0.15);
+  --guide-btn-radius: 10px;
+  --guide-btn-font-weight: 600;
+  --guide-btn-letter-spacing: 0.02em;
+  --guide-btn-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --guide-btn-padding: 6px 14px;
+  --guide-btn-font-size: 0.8rem;
+  --guide-btn-hover-transform: translateY(-1px);
+  --guide-btn-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --guide-btn-hover-border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  --guide-btn-hover-color: var(--accent-primary, #00d4ff);
+  --guide-btn-disabled-opacity: 0.6;
+  --guide-btn-disabled-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --guide-spinner-anim: modern-spin 1s linear infinite;
+  --guide-spinner-font-size: 0.9em;
+  --guide-navbtn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+  --guide-navbtn-border: 1px solid rgba(255, 255, 255, 0.1);
+  --guide-navbtn-radius: 10px;
+  --guide-navbtn-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --guide-navbtn-hover-transform: scale(1.1);
+  --guide-navbtn-hover-shadow: 0 0 12px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  --guide-nowbtn-bg: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) 0%, color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) 100%);
+  --guide-nowbtn-border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent);
+  --guide-nowbtn-radius: 10px;
+  --guide-nowbtn-font-weight: 700;
+  --guide-nowbtn-letter-spacing: 0.08em;
+  --guide-nowbtn-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --guide-nowbtn-hover-transform: translateY(-1px);
+  --guide-nowbtn-hover-shadow: 0 4px 16px color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --guide-category-font-size: 1.1rem;
+  --guide-category-font-weight: 600;
+  /* Channel rows — currently-playing accent glow */
+  --guide-row-min-height: 64px;
+  --guide-row-bitrate-min-height: 76px;
+  --guide-row-bitrate-info-padding-bottom: 24px;
+  --guide-row-playlist-min-height: 84px;
+  --guide-row-playlist-info-padding-bottom: 28px;
+  --guide-row-playlist-bitrate-min-height: 94px;
+  --guide-row-playlist-bitrate-info-padding-bottom: 32px;
+  --guide-row-transition: background 0.2s ease;
+  --guide-row-current-bg: color-mix(in srgb, var(--accent-primary, #00d4ff) 5%, transparent);
+  --guide-row-current-hover-bg: color-mix(in srgb, var(--accent-primary, #00d4ff) 6%, transparent);
+  --guide-row-current-name-color: white;
+  --guide-row-current-name-shadow: 0 0 12px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+  --guide-row-current-bar-content: '';
+  --guide-row-current-bar-bg: linear-gradient(180deg, var(--accent-primary, #00d4ff) 0%, color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) 100%);
+  --guide-row-current-bar-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, transparent);
+  --guide-row-current-bar-anim: accent-glow 3s ease-in-out infinite;
+  /* Channel info column */
+  --guide-info-gap: 14px;
+  --guide-info-padding: 10px 18px;
+  --guide-info-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Channel logos */
+  --guide-logo-radius: var(--channel-logo-radius, 10px);
+  --guide-logo-bg: rgba(255, 255, 255, 0.06);
+  --guide-logo-border: none;
+  --guide-logo-shadow: none;
+  --guide-logo-onlight-bg: rgba(255, 255, 255, 0.92);
+  --guide-logo-rect-w: calc(var(--channel-logo-size, 42px) * 1.76);
+  --guide-logo-rect-h: calc(var(--channel-logo-size, 42px) * 0.904);
+  --guide-logo-rect-radius: var(--channel-logo-radius, 8px);
+  --guide-logo-rect-bg: transparent;
+  --guide-logo-square-radius: var(--channel-logo-radius, 8px);
+  --guide-logo-square-bg: transparent;
+  /* Program blocks — "Timeline Cards" look. V3 redefines these to its own
+     rounded-block look (ModernV3.css). */
+  --prog-top: 5px;
+  --prog-bottom: 5px;
+  --prog-padding: 6px 12px;
+  --prog-bg: rgba(255, 255, 255, 0.035);
+  --prog-radius: 10px;
+  --prog-border: 1px solid rgba(255, 255, 255, 0.04);
+  --prog-border-left: 1px solid rgba(255, 255, 255, 0.04);
+  --prog-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --prog-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --prog-hover-bg: rgba(255, 255, 255, 0.08);
+  --prog-hover-border-color: rgba(255, 255, 255, 0.1);
+  --prog-hover-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  --prog-hover-z: 20;
+  --prog-past-bg: rgba(255, 255, 255, 0.02);
+  --prog-past-border-color: rgba(255, 255, 255, 0.03);
+  --prog-past-title-color: rgba(255, 255, 255, 0.55);
+  --prog-past-desc-color: rgba(255, 255, 255, 0.3);
+  --prog-current-bg: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, rgba(255, 255, 255, 0.04)) 0%, color-mix(in srgb, var(--accent-primary, #00d4ff) 5%, rgba(255, 255, 255, 0.02)) 100%);
+  --prog-current-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  /* Per-side borders — v2's current program carries the 1px outline on all
+     four sides (width/style from --prog-border, color from border-color). */
+  --prog-current-border-top: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --prog-current-border-bottom: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --prog-current-border-left: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --prog-current-border-right: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --prog-current-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) inset, 0 2px 8px rgba(0, 0, 0, 0.2);
+  --prog-current-hover-bg: linear-gradient(135deg, color-mix(in srgb, var(--accent-primary, #00d4ff) 14%, rgba(255, 255, 255, 0.06)) 0%, color-mix(in srgb, var(--accent-primary, #00d4ff) 7%, rgba(255, 255, 255, 0.03)) 100%);
+  --prog-current-hover-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 45%, transparent);
+  --prog-current-hover-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) inset, 0 6px 24px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, rgba(0, 0, 0, 0.3));
+  --prog-title-font-size: 0.88rem;
+  --prog-title-font-weight: 500;
+  --prog-title-color: rgba(255, 255, 255, 0.85);
+  --prog-title-line-height: 1.35;
+  --prog-current-title-color: rgba(255, 255, 255, 0.95);
+  --prog-current-title-font-weight: 600;
+  --prog-desc-font-size: 0.78rem;
+  --prog-desc-color: rgba(255, 255, 255, 0.4);
+  --prog-desc-margin-top: 3px;
+  --prog-desc-line-height: 1.25;
+  --prog-current-desc-color: rgba(255, 255, 255, 0.55);
+  --prog-rec-bg: linear-gradient(135deg, rgba(204, 34, 34, 0.1) 0%, rgba(204, 34, 34, 0.04) 100%);
+  --prog-rec-border-color: rgba(204, 34, 34, 0.35);
+  --prog-rec-hover-bg: linear-gradient(135deg, rgba(204, 34, 34, 0.15) 0%, rgba(204, 34, 34, 0.07) 100%);
+  --prog-rec-hover-border-color: rgba(204, 34, 34, 0.5);
+  --prog-rec-hover-shadow: 0 4px 16px rgba(204, 34, 34, 0.15);
+  --prog-sched-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  --prog-sched-border-color: rgba(255, 255, 255, 0.12);
+  --prog-sched-border-style: dashed;
+  --prog-catch-border-color: rgba(229, 160, 13, 0.4);
+  --prog-catch-hover-bg: rgba(229, 160, 13, 0.1);
+  --prog-catch-hover-border-color: rgba(229, 160, 13, 0.6);
+  --prog-catch-icon-content: '↺ ';
+  --prog-catch-icon-color: #e5a00d;
+  --prog-catch-icon-font-size: 1em;
+  --prog-catch-icon-valign: middle;
+  --prog-indicator-top: 6px;
+  --prog-indicator-right: 6px;
+  --prog-empty-bg: rgba(255, 255, 255, 0.015);
+  --prog-empty-border-color: rgba(255, 255, 255, 0.03);
+  --prog-empty-border-style: dashed;
+  /* Now-playing bar controls */
+  --npb-bar-bg: linear-gradient(180deg, rgba(15, 15, 20, 0.85) 0%, rgba(8, 8, 12, 0.95) 100%);
+  --npb-bar-filter: blur(24px) saturate(160%);
+  --npb-bar-border-top: 1px solid rgba(255, 255, 255, 0.1);
+  --npb-bar-padding: 8px 20px;
+  --npb-bar-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  --npb-bar-transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  --npb-logo-w: 44px;
+  --npb-logo-h: 44px;
+  --npb-logo-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --npb-logo-radius: 10px;
+  --npb-logo-border: 1px solid rgba(255, 255, 255, 0.08);
+  --npb-logo-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --npb-name-font-size: 0.95rem;
+  --npb-name-font-weight: 700;
+  --npb-name-letter-spacing: 0.01em;
+  --npb-name-color: white;
+  --npb-prog-bg: rgba(255, 255, 255, 0.1);
+  --npb-prog-height: 4px;
+  --npb-prog-radius: 2px;
+  --npb-prog-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) inset;
+  --npb-prog-fill-bg: linear-gradient(90deg, var(--accent-primary, #00d4ff) 0%, color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, white) 100%);
+  --npb-prog-fill-shadow: 0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent);
+  --npb-scrub-w: 14px;
+  --npb-scrub-h: 14px;
+  --npb-scrub-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--accent-primary, #00d4ff);
+  --npb-scrub-transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  --npb-btn-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --npb-btn-border: 1px solid rgba(255, 255, 255, 0.12);
+  --npb-btn-radius: 10px;
+  --npb-btn-color: rgba(255, 255, 255, 0.9);
+  --npb-btn-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --npb-btn-hover-transform: scale(1.1);
+  --npb-btn-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent) inset;
+  --npb-vol-height: 4px;
+  --npb-vol-bg: rgba(255, 255, 255, 0.15);
+  --npb-vol-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) inset;
+  --npb-vol-thumb-w: 14px;
+  --npb-vol-thumb-h: 14px;
+  --npb-vol-thumb-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --npb-modal-bg: linear-gradient(135deg, color-mix(in srgb, var(--surface-color, #1a1a1a), white 3%) 0%, var(--surface-color, #1a1a1a) 100%);
+  --npb-modal-border: 1px solid rgba(255, 255, 255, 0.12);
+  --npb-modal-radius: 16px;
+  --npb-modal-shadow: 0 16px 48px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+  --npb-modal-header-bg: rgba(255, 255, 255, 0.02);
+  --npb-modal-close-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --npb-modal-close-border: 1px solid rgba(255, 255, 255, 0.15);
+  --npb-modal-close-radius: 10px;
+  --npb-modal-close-transition: all 0.2s ease;
+  --npb-modal-input-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  --npb-modal-input-border: 1px solid rgba(255, 255, 255, 0.12);
+  --npb-modal-input-radius: 10px;
+  --npb-modal-input-transition: all 0.25s ease;
+  --npb-modal-input-focus-border: color-mix(in srgb, var(--accent-color, #007acc) 70%, transparent);
+  --npb-modal-input-focus-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color, #007acc) 15%, transparent);
+  --npb-modal-footer-bg: rgba(255, 255, 255, 0.02);
+  --npb-modal-primary-bg: linear-gradient(135deg, var(--accent-color, #007acc) 0%, color-mix(in srgb, var(--accent-color, #007acc) 80%, black) 100%);
+  --npb-modal-primary-border: 1px solid var(--accent-color, #007acc);
+  --npb-modal-primary-shadow: 0 4px 12px color-mix(in srgb, var(--accent-color, #007acc) 30%, transparent);
+  --npb-modal-primary-hover-transform: translateY(-1px);
+  --npb-modal-primary-hover-shadow: 0 6px 16px color-mix(in srgb, var(--accent-color, #007acc) 40%, transparent), 0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  --npb-ts-height: 10px;
+  --npb-ts-bg: rgba(255, 255, 255, 0.12);
+  --npb-ts-radius: 5px;
+  --npb-ts-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) inset;
+  --npb-ts-fill-bg: linear-gradient(90deg, var(--accent-primary, #00d4ff) 0%, color-mix(in srgb, var(--accent-primary, #00d4ff) 80%, white) 100%);
+  --npb-ts-fill-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent);
+  --npb-ts-handle-w: 16px;
+  --npb-ts-handle-h: 16px;
+  --npb-ts-handle-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--accent-primary, #00d4ff);
+  --npb-live-badge-shadow: 0 0 10px rgba(255, 64, 64, 0.5);
+  --npb-live-edge-shadow: 0 0 10px rgba(255, 64, 64, 0.6);
+  --npb-livebtn-bg: linear-gradient(135deg, rgba(255, 80, 80, 0.2) 0%, rgba(255, 60, 60, 0.12) 100%);
+  --npb-livebtn-border: 1px solid rgba(255, 100, 100, 0.5);
+  --npb-livebtn-radius: 10px;
+  --npb-livebtn-font-weight: 700;
+  --npb-livebtn-letter-spacing: 0.02em;
+  --npb-livebtn-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --npb-livebtn-hover-transform: translateY(-1px);
+  --npb-livebtn-hover-shadow: 0 4px 16px rgba(255, 64, 64, 0.3), 0 0 0 1px rgba(255, 100, 100, 0.2) inset;
+  /* Category list — v2 item/count/search values (v3 overrides below) */
+  --cat-item-padding: 8px 12px 8px 8px;
+  --cat-item-margin: 3px 0;
+  --cat-item-radius: 10px;
+  --cat-item-bg: rgba(255, 255, 255, 0.02);
+  --cat-item-border: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-item-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --cat-item-pos: relative;
+  --cat-item-overflow: hidden;
+  --cat-item-bar-content: '';
+  --cat-item-bar-width: 2px;
+  --cat-item-bar-bg: var(--accent-primary, #00d4ff);
+  --cat-item-bar-radius: 0 2px 2px 0;
+  --cat-item-bar-height: 0;
+  --cat-item-bar-transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --cat-item-bar-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+  --cat-item-hover-bg: rgba(255, 255, 255, 0.05);
+  --cat-item-hover-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
+  --cat-item-hover-transform: translateX(3px);
+  --cat-item-bar-hover-height: 16px;
+  --cat-item-nested-padding-left: 12px;
+  --cat-item-nested-font-size: calc(var(--category-font-size, 13px) * 0.9);
+  --cat-item-nested-radius: 8px;
+  --cat-item-nested-margin: 2px 0;
+  --cat-item-nested-bg: rgba(255, 255, 255, 0.01);
+  --cat-item-nested-border-top: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-item-nested-border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-item-nested-border-left: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-item-nested-border-right: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-item-selected-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, transparent) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 6%, transparent) 100%);
+  --cat-item-selected-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  --cat-item-selected-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) inset;
+  --cat-item-bar-selected-height: 50%;
+  --cat-item-bar-selected-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+  --cat-item-selected-count-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) 100%);
+  --cat-item-selected-count-color: #fff;
+  --cat-item-selected-count-shadow: 0 2px 4px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  --cat-count-font-size: calc(var(--category-font-size, 13px) * 0.85);
+  --cat-count-font-weight: 700;
+  --cat-count-padding: 4px 10px;
+  --cat-count-bg: rgba(255, 255, 255, 0.08);
+  --cat-count-color: rgba(255, 255, 255, 0.6);
+  --cat-count-radius: 20px;
+  --cat-count-transition: all 0.25s ease;
+  --cat-count-min-width: 28px;
+  --cat-count-text-align: center;
+  --cat-count-hover-bg: rgba(255, 255, 255, 0.12);
+  --cat-count-hover-color: rgba(255, 255, 255, 0.9);
+  --cat-search-margin: 4px 12px;
+  --cat-search-width: calc(100% - 24px);
+  --cat-search-padding: 6px 12px;
+  --cat-search-bg: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 100%);
+  --cat-search-border: 1px solid rgba(255, 255, 255, 0.12);
+  --cat-search-radius: 8px;
+  --cat-search-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --cat-search-transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --cat-search-box-sizing: border-box;
+  --cat-search-hover-bg: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.03) 100%);
+  --cat-search-hover-transform: translateX(2px);
+  --cat-search-hover-border-color: rgba(255, 255, 255, 0.2);
+  --cat-search-hover-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+  --cat-search-focused-transform: translateX(2px);
+  --cat-search-focused-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 10%, transparent) 0%,
+    rgba(255, 255, 255, 0.08) 100%);
+  --cat-search-focused-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
+  --cat-search-focused-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent), 0 3px 12px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  /* Source groups/headers — v2 clean groups (v3 overrides below) */
+  --cat-src-group-radius: 8px;
+  --cat-src-group-bg: rgba(255, 255, 255, 0.02);
+  --cat-src-group-border: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-src-content-padding: 8px;
+  --cat-src-content-bg: rgba(0, 0, 0, 0.2);
+  --cat-src-header-bg: rgba(255, 255, 255, 0.03);
+  --cat-src-header-color: rgba(255, 255, 255, 0.8);
+  --cat-src-header-border-top: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-src-header-hover-bg: rgba(255, 255, 255, 0.08);
+  --cat-src-header-hover-color: white;
+  --cat-src-header-hover-border-top-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
+  --cat-src-count-font-size: calc(var(--category-font-size, 13px) * 0.85);
+  --cat-src-count-padding: 2px 8px;
+  --cat-src-count-radius: 10px;
+  --cat-src-count-bg: rgba(255, 255, 255, 0.1);
+  --cat-src-count-color: rgba(255, 255, 255, 0.7);
+  --cat-src-count-line-height: 1.2;
+  --cat-src-count-transition: all 0.15s ease;
+  --cat-src-count-hover-bg: rgba(255, 255, 255, 0.15);
+  --cat-src-count-hover-color: rgba(255, 255, 255, 0.9);
+  /* Source name typography — v2 */
+  --cat-src-name-weight: 500;
+  --cat-src-name-font-size: var(--category-font-size, 13px);
+  --cat-src-name-letter-spacing: 0.01em;
+  --cat-src-name-line-height: 1.2;
+  /* Category name typography — v2 */
+  --cat-name-weight: 500;
+  --cat-name-letter-spacing: 0.01em;
+  --cat-list-name-font-size: 12px;
+  --cat-name-media-font-size: var(--category-font-size, 13px);
+  --cat-src-header-media-padding: 10px 12px;
+  /* Category list-bar — v2 gradient pill (v3 clean look overrides in ModernV3.css) */
+  --cat-list-width: 100%;
+  --cat-list-box-sizing: border-box;
+  --cat-list-strip-margin: 3px 0; /* v2 bars inherit .category-item's vertical gap */
+  --cat-list-bg: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%);
+  --cat-list-border-top: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-list-border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-list-border-left: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-list-border-right: 1px solid rgba(255, 255, 255, 0.04);
+  --cat-list-padding: 8px 12px;
+  --cat-list-radius: 8px;
+  --cat-list-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --cat-list-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --cat-list-pos: relative;
+  --cat-list-overflow: hidden;
+  --cat-list-bar-content: '';
+  --cat-list-bar-width: 3px;
+  --cat-list-bar-bg: var(--accent-primary, #00d4ff);
+  --cat-list-bar-radius: 0 2px 2px 0;
+  --cat-list-bar-height: 0;
+  --cat-list-bar-transition: height 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --cat-list-bar-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+  --cat-list-hover-bg: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.02) 100%);
+  --cat-list-hover-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent);
+  --cat-list-hover-transform: translateX(3px);
+  --cat-list-hover-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  --cat-list-bar-hover-height: 14px;
+  --cat-list-selected-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, transparent) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 5%, transparent) 100%);
+  --cat-list-selected-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  --cat-list-selected-shadow: 0 3px 10px rgba(0, 0, 0, 0.2), 0 0 0 1px color-mix(in srgb, var(--accent-primary, #00d4ff) 15%, transparent) inset;
+  --cat-list-selected-pos: relative;
+  --cat-list-bar-selected-height: 50%;
+  --cat-list-bar-selected-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+  /* Custom-groups section — v2 pill values (v3 redefines to the clean look) */
+  --cat-custom-bg: rgba(255, 255, 255, 0.03);
+  --cat-custom-border-top: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-custom-border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-custom-border-left: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-custom-border-right: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-custom-bar-bg: var(--accent-primary, #00d4ff);
+  --cat-custom-bar-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+  --cat-custom-bar-selected-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+  --cat-custom-selected-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 12%, transparent) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 6%, transparent) 100%);
+  --cat-custom-selected-border-color: color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  --cat-custom-selected-count-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 40%, transparent) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 25%, transparent) 100%);
+  --cat-custom-selected-count-color: white;
+  /* Category strip icons — v2 icon chrome + per-accent colors (v3 inherits;
+     light sheet redefines the light values) */
+  --cat-icn-radius: 6px;
+  --cat-icn-display: flex;
+  --cat-icn-bg: rgba(255, 255, 255, 0.04);
+  --cat-icn-color: rgba(255, 255, 255, 0.6);
+  --cat-icn-border: 1px solid rgba(255, 255, 255, 0.05);
+  --cat-icn-transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  --cat-icn-svg-size: 11px;
+  --cat-icn-all-bg: rgba(0, 212, 255, 0.08);
+  --cat-icn-all-color: #00d4ff;
+  --cat-icn-all-border: rgba(0, 212, 255, 0.15);
+  --cat-icn-all-hover-bg: rgba(0, 212, 255, 0.16);
+  --cat-icn-all-hover-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+  --cat-icn-all-hover-color: #33e0ff;
+  --cat-icn-all-hover-border: rgba(0, 212, 255, 0.3);
+  --cat-icn-fav-bg: rgba(255, 196, 0, 0.08);
+  --cat-icn-fav-color: #ffc400;
+  --cat-icn-fav-border: rgba(255, 196, 0, 0.15);
+  --cat-icn-fav-hover-bg: rgba(255, 196, 0, 0.16);
+  --cat-icn-fav-hover-shadow: 0 0 10px rgba(255, 196, 0, 0.4);
+  --cat-icn-fav-hover-color: #ffd033;
+  --cat-icn-fav-hover-border: rgba(255, 196, 0, 0.3);
+  --cat-icn-watch-bg: rgba(99, 102, 241, 0.08);
+  --cat-icn-watch-color: #6366f1;
+  --cat-icn-watch-border: rgba(99, 102, 241, 0.15);
+  --cat-icn-watch-hover-bg: rgba(99, 102, 241, 0.16);
+  --cat-icn-watch-hover-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  --cat-icn-watch-hover-color: #818cf8;
+  --cat-icn-watch-hover-border: rgba(99, 102, 241, 0.3);
+  --cat-icn-recent-bg: rgba(244, 63, 94, 0.08);
+  --cat-icn-recent-color: #f43f5e;
+  --cat-icn-recent-border: rgba(244, 63, 94, 0.15);
+  --cat-icn-recent-hover-bg: rgba(244, 63, 94, 0.16);
+  --cat-icn-recent-hover-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+  --cat-icn-recent-hover-color: #fb7185;
+  --cat-icn-recent-hover-border: rgba(244, 63, 94, 0.3);
+  --cat-icn-custom-bg: rgba(16, 185, 129, 0.08);
+  --cat-icn-custom-color: #10b981;
+  --cat-icn-custom-border: rgba(16, 185, 129, 0.15);
+  --cat-icn-custom-hover-bg: rgba(16, 185, 129, 0.16);
+  --cat-icn-custom-hover-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  --cat-icn-custom-hover-color: #34d399;
+  --cat-icn-custom-hover-border: rgba(16, 185, 129, 0.3);
+  /* Category strip title — v2 accent color + chrome (v3 inherits; light
+     sheet overrides the color) */
+  --cat-title-color: var(--accent-primary, #00d4ff);
+  --cat-title-font-size: 0.7rem;
+  --cat-title-font-weight: 700;
+  --cat-title-letter-spacing: 0.12em;
+  --cat-title-display: flex;
+  --cat-title-align: center;
+  --cat-title-gap: 8px;
+  --cat-title-dot-shadow: 0 0 8px var(--accent-primary, #00d4ff);
+  /* Sidebar section headers — v2 header chrome (v3 inherits) */
+  --cat-hdr-font-size: 0.65rem;
+  --cat-hdr-color: rgba(255, 255, 255, 0.35);
+  --cat-hdr-padding: 16px 16px 8px;
+  --cat-hdr-letter-spacing: 0.1em;
+  /* Section-header ::after divider — v2 gradient (v3 redefines the same
+     token in ModernV3.css; light sheet owns light) */
+  --ssha-divider-bg: linear-gradient(90deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.02) 100%);
+  /* Add-group button — v2 chrome (v3 inherits) */
+  --cat-add-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, rgba(255,255,255,0.1)) 0%,
+    rgba(255, 255, 255, 0.05) 100%);
+  --cat-add-border: 1px solid color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent);
+  --cat-add-color: var(--accent-primary, #00d4ff);
+  --cat-add-size: 28px;
+  --cat-add-radius: 8px;
+  --cat-add-display: flex;
+  --cat-add-align: center;
+  --cat-add-justify: center;
+  --cat-add-transition: all 0.25s ease;
+  --cat-add-hover-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary, #00d4ff) 20%, transparent);
+  /* Section divider — v2 accent gradient + width (v3 inherits) */
+  --cat-divider-bg: linear-gradient(90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) 50%,
+    transparent 100%);
+  --cat-divider-width: calc(100% - 40px);
+  /* list-bar count typography (v2 values; v3 inherits) */
+  --cat-list-count-font-size: 10px;
+  --cat-list-count-font-weight: 700;
+  --cat-list-count-padding: 2px 6px;
+  --cat-list-count-min-width: 20px;
+  --cat-list-count-radius: 12px;
+  /* VOD sidebar active-item icon glows — per-icon accent colors (v3 inherits;
+     light sheet redefines with the light values) */
+  --vs-icon-glow-bg: rgba(0, 212, 255, 0.16);
+  --vs-icon-glow-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+  --vs-icon-glow-color: #33e0ff;
+  --vs-icon-glow-border: rgba(0, 212, 255, 0.3);
+  --vs-icon-fav-bg: rgba(255, 196, 0, 0.16);
+  --vs-icon-fav-shadow: 0 0 10px rgba(255, 196, 0, 0.4);
+  --vs-icon-fav-color: #ffd033;
+  --vs-icon-fav-border: rgba(255, 196, 0, 0.3);
+  --vs-icon-watch-bg: rgba(99, 102, 241, 0.16);
+  --vs-icon-watch-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  --vs-icon-watch-color: #818cf8;
+  --vs-icon-watch-border: rgba(99, 102, 241, 0.3);
+  --vs-icon-recent-bg: rgba(244, 63, 94, 0.16);
+  --vs-icon-recent-shadow: 0 0 10px rgba(244, 63, 94, 0.4);
+  --vs-icon-recent-color: #fb7185;
+  --vs-icon-recent-border: rgba(244, 63, 94, 0.3);
+  /* VOD scrollbars — accent gradient thumb (v2; v3 inherits; light sheet
+     redefines with the light solid values) */
+  --scrollbar-width: var(--app-scrollbar-width, 6px);
+  --vs-scrollbar-thumb-bg: linear-gradient(180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) 20%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) 80%,
+    transparent 100%);
+  --vs-scrollbar-thumb-hover-bg: linear-gradient(180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, transparent) 20%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, transparent) 80%,
+    transparent 100%);
+  /* Guide program progress — v2 bar/fill values (v3 inherits) */
+  --guide-prog-bar-bg: rgba(255, 255, 255, 0.08);
+  --guide-prog-bar-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) inset;
+  --guide-prog-bar-margin-top: 8px;
+  --guide-prog-fill-bg: linear-gradient(90deg,
+    var(--accent-primary, #00d4ff) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, white) 100%);
+  --guide-prog-fill-shadow: 0 0 10px color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
+  --guide-prog-fill-radius: 2px;
+  /* Guide current-time indicator — v2 fading gradient + glow (v3 inherits) */
+  --gcti-bg: linear-gradient(to bottom,
+    var(--accent-primary, #00d4ff) 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, transparent) 50%,
+    transparent 100%);
+  --gcti-shadow: 0 0 10px var(--accent-primary, #00d4ff),
+    0 0 20px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent);
+  --gcti-before-filter: drop-shadow(0 0 6px var(--accent-primary, #00d4ff));
+  /* Guide scrollbars — v2 accent gradient thumbs (v3 inherits) */
+  --guide-scroll-strip-width: 6px;
+  --guide-scroll-strip-thumb-bg: linear-gradient(180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) 20%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent) 80%,
+    transparent 100%);
+  --guide-scroll-ch-thumb-bg: linear-gradient(180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) 20%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent) 80%,
+    transparent 100%);
+
+  --cat-title-dot-radius: 50%;
+  /* Video preview resizer — v2 handle/dot chrome + differing geometry
+     (v3 inherits; base fallbacks are the v1 values) */
+  --resizer-size: 28px;
+  --resizer-v-width: 44px;
+  --resizer-v-height: 18px;
+  --resizer-v-bottom: -9px;
+  --resizer-dot-size: 10px;
+  --resizer-dot-bg: color-mix(in srgb, var(--accent-primary, #00d4ff) 60%, transparent);
+  --resizer-dot-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5),
+    0 0 8px color-mix(in srgb, var(--accent-primary, #00d4ff) 50%, transparent);
+  --resizer-dot-transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  --resizer-dot-v-width: 36px;
+  --resizer-dot-v-height: 8px;
+  --resizer-dot-v-radius: 4px;
+  --resizer-dot-hover-transform: scale(1.4);
+  --resizer-dot-hover-shadow: 0 0 0 3px rgba(0, 0, 0, 0.4),
+    0 0 16px color-mix(in srgb, var(--accent-primary, #00d4ff) 70%, transparent);
+  --resizer-dot-v-hover-transform: scaleY(1.4);
+  --resizer-dot-active-transform: scale(1.1);
+  --resizer-dot-active-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(255, 255, 255, 0.5);
+  --resizer-dot-v-active-transform: scaleY(1.1);
+  /* Program context menu — v2 glass chrome (v3 inherits; base fallbacks are
+     the v1 values; the background menu's separator shares the family) */
+  --ctx-menu-bg: linear-gradient(135deg,
+    color-mix(in srgb, var(--surface-color, #1a1a1a), white 4%) 0%,
+    var(--surface-color, #1a1a1a) 100%);
+  --ctx-menu-border: 1px solid rgba(255, 255, 255, 0.1);
+  --ctx-menu-radius: 14px;
+  --ctx-menu-shadow: 0 16px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  --ctx-menu-padding: 6px;
+  --ctx-menu-backdrop: blur(24px) saturate(160%);
+  --ctx-menu-item-padding: 10px 14px;
+  --ctx-menu-item-radius: 10px;
+  --ctx-menu-item-font: 0.88rem;
+  --ctx-menu-item-weight: 500;
+  --ctx-menu-item-transition: all 0.2s ease;
+  --ctx-menu-item-hover-bg: rgba(255, 255, 255, 0.08);
+  --ctx-menu-separator-bg: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 255, 255, 0.08) 80%,
+    transparent 100%);
+  --ctx-menu-separator-margin: 4px 8px;
+}
+
+/* Modern Category Strip Header */
+.modern-ui .category-strip-header {
+  padding: 12px 16px 8px; /* Reduced padding for more compact header */
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modern-ui .category-strip-header::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px; /* Match new horizontal padding */
+  right: 16px; /* Match new horizontal padding */
+  height: 1px;
+  background: var(--cat-divider-bg, linear-gradient(90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--accent-primary, #00d4ff) 30%, transparent) 50%,
+    transparent 100%));
+}
+
+/* Modern Category Strip Title / Section Headers / Add Group / Section Divider —
+   surface + typography values folded into the --cat-title / --cat-hdr /
+   --cat-add / --cat-divider token families above, consumed by the
+   CategoryStrip.css base (v3 inherits). The title::before dot has no v1 base
+   (modern-UI construct), so it stays a thin consumer here. */
+.modern-ui .category-strip-title::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: var(--accent-primary, #00d4ff);
+  border-radius: var(--cat-title-dot-radius, 50%);
+  box-shadow: var(--cat-title-dot-shadow, 0 0 8px var(--accent-primary, #00d4ff));
+}
+
+/* Modern Custom Groups Section — the pill values live in the --cat-custom-*
+   tokens (v3 redefines them to the clean look), consumed by the component base
+   in CategoryStrip.css. */
+.modern-ui .custom-groups-section {
+  margin: 0;
+}
+
+/* Hide the old list scrollbar when modern UI is enabled */
+.modern-ui .category-strip-list {
+  display: none;
+}
+
+/* ============================================
+   MODERN EPG / CHANNEL PANEL
+   ============================================ */
+/* Modern Current Time Indicator + Program Progress — surface values folded
+   into the --gcti-* / --guide-prog-* tokens above, consumed by the
+   ChannelPanel.css base (v3 inherits). */
+/* Video preview resizer — surface + geometry values folded into the
+   --resizer-* tokens above, consumed by the ChannelPanel.css base with v1
+   fallbacks (v3 inherits). */
+
+/* Alternate view NowPlayingBar: compact layout (modern UI only — no v1 base
+   equivalent, kept as additive layout, not an override) */
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-progress-section {
+  flex: 1 1 0%;
+  max-width: none;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-controls-row {
+  flex-wrap: wrap;
+  gap: 10px;
+  row-gap: 6px;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+  margin-left: 0;
+  padding-left: 8px;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-volume-slider {
+  width: 50px;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-description-section,
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-divider {
+  display: none;
+}
+
+.modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-channel-section {
+  max-width: 220px;
+}
+
+@media (max-width: 1000px) {
+  .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-extra-controls {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-channel-up-btn,
+  .modern-ui .guide-top-section.alternate-view .now-playing-bar .npb-channel-down-btn {
+    display: none;
+  }
+}
+
+/* Modern Video Preview Resizer */
+
+/* --------------------------------------------------
+   3. PROGRAM BLOCKS - "Timeline Cards" (surface values folded into
+   ProgramBlock.css tokens; time-header remains below)
+   -------------------------------------------------- */
+
+/* --------------------------------------------------
+   4. TIME HEADER - "Minimal Timeline" (surface values folded into the
+   --guide-time-header-* / --guide-time-spacer-* tokens, consumed by the
+   ChannelPanel.css base; v3 redefines them to the clean look)
+   -------------------------------------------------- */
+
+/* --------------------------------------------------
+   5. PREVIEW PANE - "Cinematic View"
+   -------------------------------------------------- */
+
+/* --------------------------------------------------
+   6. CONTEXT MENUS — surface values folded into the --ctx-menu-* tokens
+   above, consumed by the ProgramContextMenu.css / BackgroundContextMenu.css
+   bases with v1 fallbacks (v3 inherits).
+   -------------------------------------------------- */

@@ -1,0 +1,156 @@
+import { useState, useEffect } from 'react';
+import type { SportsEvent } from '@ynotv/core';
+import {
+  formatEventDate,
+} from '../../services/sports';
+import { useSportsSettingsStore } from '../../stores/sportsSettingsStore';
+import { useUpcomingSports } from '../../hooks/useUpcomingSports';
+import { GameCard } from './GameCard';
+import { GameDetail } from './GameDetail';
+import { GameCardSkeleton } from './LoadingSkeleton';
+import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
+import './LoadingSkeleton.css';
+
+interface UpcomingTabProps {
+  onSearchChannels?: (channelName: string) => void;
+  onPlayChannel?: (channel: import('../../db').StoredChannel) => void;
+}
+
+export function UpcomingTab({ onSearchChannels, onPlayChannel }: UpcomingTabProps) {
+  useTranslation();
+  const [selectedEvent, setSelectedEvent] = useState<SportsEvent | null>(null);
+  const [daysAhead, setDaysAhead] = useState(3);
+
+  const { upcomingLeagues, loaded, loadSettings } = useSportsSettingsStore();
+
+  useEffect(() => {
+    if (!loaded) {
+      loadSettings();
+    }
+  }, [loaded, loadSettings]);
+
+  // Use cached hook for upcoming events
+  const { events, loading, error, refresh } = useUpcomingSports({
+    daysAhead,
+    leagues: upcomingLeagues,
+    enabled: loaded,
+  });
+
+  const loadEvents = () => {
+    refresh();
+  };
+
+  const handleChannelClick = (channelName: string) => {
+    if (onSearchChannels) {
+      onSearchChannels(channelName);
+    }
+  };
+
+  const groupByDate = (events: SportsEvent[]) => {
+    const groups: Map<string, SportsEvent[]> = new Map();
+    for (const event of events) {
+      const dateKey = event.startTime.toDateString();
+      const existing = groups.get(dateKey) || [];
+      existing.push(event);
+      groups.set(dateKey, existing);
+    }
+    return groups;
+  };
+
+  const groupedEvents = groupByDate(events);
+
+  if (loading && events.length === 0) {
+    return (
+      <div className="sports-tab-content">
+        <div className="upcoming-header">
+          <h2>{i18n.t('sports:upcomingGames')}</h2>
+          <div className="sports-filters">
+            <label>{i18n.t('sports:showGamesFor')}</label>
+            <select value={daysAhead} onChange={(e) => setDaysAhead(Number(e.target.value))}>
+              <option value={1}>{i18n.t('time:today')}</option>
+              <option value={3}>{i18n.t('sports:nextDays', { count: 3 })}</option>
+              <option value={7}>{i18n.t('sports:nextDays', { count: 7 })}</option>
+              <option value={14}>{i18n.t('sports:nextDays', { count: 14 })}</option>
+            </select>
+          </div>
+        </div>
+        <div className="skeleton-grid">
+          {Array.from({ length: 6 }, (_, i) => (
+            <GameCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="sports-error">
+        <p>{error}</p>
+        <button className="sports-btn" onClick={loadEvents}>{i18n.t('common:retry')}</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sports-tab-content">
+      <div className="upcoming-header">
+        <h2>{i18n.t('sports:upcomingGames')}</h2>
+        <div className="sports-filters">
+          <label>{i18n.t('sports:showGamesFor')}</label>
+          <select value={daysAhead} onChange={(e) => setDaysAhead(Number(e.target.value))}>
+            <option value={1}>{i18n.t('time:today')}</option>
+            <option value={3}>{i18n.t('sports:nextDays', { count: 3 })}</option>
+            <option value={7}>{i18n.t('sports:nextDays', { count: 7 })}</option>
+            <option value={14}>{i18n.t('sports:nextDays', { count: 14 })}</option>
+          </select>
+        </div>
+      </div>
+
+      {events.length === 0 ? (
+        <div className="sports-empty">
+          <div className="sports-empty-icon">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+          </div>
+          <h3>{i18n.t('sports:noUpcomingGames')}</h3>
+          <p>{i18n.t('sports:noGamesScheduled', { count: daysAhead })}</p>
+        </div>
+      ) : (
+        Array.from(groupedEvents.entries()).map(([dateKey, dayEvents]) => (
+          <section key={dateKey} className="sports-section">
+            <h2 className="sports-section-title">
+              {formatEventDate(new Date(dateKey))}
+              <span className="sports-section-count">{i18n.t('sports:gameCount', { count: dayEvents.length })}</span>
+            </h2>
+            <div className="sports-events-grid">
+              {dayEvents.map(event => (
+                <GameCard
+                  key={event.id}
+                  event={event}
+                  onClick={() => setSelectedEvent(event)}
+                  onChannelClick={handleChannelClick}
+                  onSearchTeams={onSearchChannels}
+                  onPlayChannel={onPlayChannel}
+                />
+              ))}
+            </div>
+          </section>
+        ))
+      )}
+
+      {selectedEvent && (
+        <GameDetail
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+          onChannelClick={handleChannelClick}
+        />
+      )}
+    </div>
+  );
+}

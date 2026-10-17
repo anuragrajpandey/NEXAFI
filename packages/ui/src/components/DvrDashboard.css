@@ -1,0 +1,1944 @@
+/* DVR Dashboard - Professional themed design */
+.dvr-dashboard {
+    position: fixed;
+    top: var(--page-top, 32px);
+    /* Below title bar */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding-top: var(--page-pad-top, 0);
+    box-sizing: border-box;
+    background: var(--glass-dvr-bg, var(--glass-surface-bg, var(--bg-primary, #0d0d0d)));
+    backdrop-filter: var(--glass-surface-filter, none);
+    -webkit-backdrop-filter: var(--glass-surface-filter, none);
+    border: var(--glass-surface-border, none);
+    border-radius: var(--glass-panel-radius, 0);
+    box-shadow: var(--glass-surface-shadow, none);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* ============================================
+   SIDEBAR
+   ============================================ */
+.dvr-sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: var(--bg-secondary, rgba(30, 30, 30, 0.95));
+    border-right: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* Pseudo-element to provide a dark underlay mimicking the app background, 
+   ensuring glassmorphism theme colors cast securely against the transparent MPV hole */
+.dvr-sidebar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-primary, #0f0f0f);
+    z-index: -1;
+}
+
+.dvr-sidebar-header {
+    padding: 24px 16px;
+    border-bottom: 1px solid var(--border-color, #2a2a2a);
+}
+
+.dvr-sidebar-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.dvr-sidebar-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary, #888);
+    margin: 0;
+}
+
+/* Navigation */
+.dvr-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    padding: 16px 8px;
+}
+
+.dvr-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary, #888);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+}
+
+.dvr-nav-item:hover {
+    background: var(--bg-hover, #2a2a2a);
+    color: var(--text-primary, #fff);
+}
+
+.dvr-nav-item.active {
+    background: var(--accent-primary, #e50914);
+    color: white;
+}
+
+.dvr-nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.8;
+}
+
+.dvr-nav-label {
+    flex: 1;
+}
+
+.dvr-nav-badge {
+    background: var(--accent-primary, #00d4ff);
+    color: var(--bg-primary, #1a1a1a);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    min-width: 20px;
+    text-align: center;
+}
+
+/* Sidebar Footer */
+.dvr-sidebar-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border-top: 1px solid var(--border-color, #2a2a2a);
+}
+
+.dvr-recording-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: rgba(231, 76, 60, 0.15);
+    border-radius: 8px;
+    color: #e74c3c;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.dvr-recording-pulse {
+    width: 8px;
+    height: 8px;
+    background: #e74c3c;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+.dvr-back-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: 1px solid var(--border-color, #2a2a2a);
+    background: transparent;
+    color: var(--text-secondary, #888);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    transition: all 0.15s ease;
+}
+
+.dvr-back-btn:hover {
+    background: var(--bg-hover, #2a2a2a);
+    color: var(--text-primary, #fff);
+}
+
+/* ============================================
+   MAIN CONTENT
+   ============================================ */
+.dvr-main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--dvr-surface-bg, var(--bg-primary, #0f0f0f));
+}
+
+.dvr-main-header {
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--border-color, #2a2a2a);
+    background: linear-gradient(135deg, var(--bg-secondary, #1a1a1a) 0%, var(--bg-primary, #0f0f0f) 100%);
+}
+
+.dvr-main-title {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+    background: linear-gradient(135deg, var(--text-primary, #fff) 0%, var(--text-secondary, #888) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dvr-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 32px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.dvr-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.dvr-content::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.dvr-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.dvr-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================
+   LOADING & EMPTY STATES
+   ============================================ */
+.dvr-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 60px 20px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+    font-size: 15px;
+}
+
+.dvr-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--accent-primary, #00d4ff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.dvr-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 20px;
+    text-align: center;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.dvr-empty-icon {
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+    margin-bottom: 24px;
+    opacity: 0.5;
+}
+
+.dvr-empty-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--text-primary, #fff);
+}
+
+.dvr-empty-state p {
+    font-size: 15px;
+    margin: 0;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+/* ============================================
+   SECTIONS
+   ============================================ */
+.dvr-scheduled {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.dvr-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dvr-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    border-bottom: 1px solid var(--border-color, #2a2a2a);
+    padding-bottom: 16px;
+    background: linear-gradient(135deg, var(--text-primary, #fff) 0%, var(--text-secondary, #888) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dvr-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.dvr-status-dot.recording {
+    background: #e74c3c;
+    box-shadow: 0 0 8px #e74c3c;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+.dvr-status-dot.scheduled {
+    background: var(--accent-primary, #00d4ff);
+    box-shadow: 0 0 8px var(--accent-glow, rgba(0, 212, 255, 0.4));
+}
+
+/* ============================================
+   CARDS GRID
+   ============================================ */
+.dvr-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+}
+
+.dvr-card {
+    background: var(--dvr-card-bg, var(--surface-color, rgba(40, 40, 40, 0.85)));
+    border: var(--dvr-card-border, 1px solid var(--surface-border, rgba(255, 255, 255, 0.1)));
+    border-radius: var(--dvr-card-radius, 16px);
+    padding: 20px;
+    transition: var(--dvr-card-transition, all 0.3s ease);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.dvr-card:hover {
+    border-color: var(--dvr-card-hover-border-color, var(--accent-primary, #00d4ff));
+    box-shadow: var(--dvr-card-hover-shadow, 0 4px 20px var(--accent-glow, rgba(0, 212, 255, 0.15)));
+    transform: var(--dvr-card-hover-transform, translateY(-2px));
+}
+
+.dvr-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dvr-card-status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dvr-card-status-badge.recording {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.dvr-card-status-badge.downloading {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.dvr-card-status-badge.scheduled {
+    background: rgba(0, 212, 255, 0.15);
+    color: var(--accent-primary, #00d4ff);
+    border: 1px solid var(--accent-glow, rgba(0, 212, 255, 0.3));
+}
+
+.dvr-card-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.dvr-btn-icon {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-hover, rgba(60, 60, 60, 0.9));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    border-radius: 8px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dvr-btn-icon:hover {
+    background: var(--surface-active, rgba(80, 80, 80, 0.95));
+    color: var(--text-primary, #fff);
+    border-color: var(--accent-primary, #00d4ff);
+}
+
+.dvr-btn-icon.danger:hover {
+    background: rgba(231, 76, 60, 0.2);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
+.dvr-btn-icon.play:hover {
+    background: rgba(46, 204, 113, 0.2);
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
+.dvr-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dvr-card-title {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #fff);
+    line-height: 1.3;
+}
+
+.dvr-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.dvr-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.dvr-meta-item svg {
+    opacity: 0.7;
+}
+
+.dvr-card-padding {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--dvr-progress-bg, var(--bg-tertiary, rgba(40, 40, 40, 0.9)));
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+.dvr-padding-label {
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.dvr-padding-value {
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    font-weight: 500;
+}
+
+/* Progress Bar */
+.dvr-card-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-top: 8px;
+    border-top: var(--dvr-card-progress-border-top, 1px solid var(--surface-border, rgba(255, 255, 255, 0.1)));
+}
+
+.dvr-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dvr-progress-label {
+    font-size: 12px;
+    color: #e74c3c;
+    font-weight: 500;
+}
+
+.dvr-progress-time {
+    font-size: 13px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    font-family: 'SF Mono', Monaco, monospace;
+    font-weight: 600;
+}
+
+.dvr-progress-bar {
+    height: 6px;
+    background: var(--dvr-progress-bg, var(--bg-tertiary, rgba(40, 40, 40, 0.9)));
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.dvr-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c0392b, #e74c3c);
+    border-radius: 3px;
+    transition: width 1s linear;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.4);
+}
+
+/* ============================================
+   RECORDED GRID (Media Cards)
+   ============================================ */
+.dvr-recorded-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+
+.dvr-media-card {
+    background: var(--dvr-card-bg, var(--surface-color, rgba(40, 40, 40, 0.85)));
+    border: var(--dvr-card-border, 1px solid var(--surface-border, rgba(255, 255, 255, 0.1)));
+    border-radius: var(--dvr-card-radius, 16px);
+    overflow: hidden;
+    transition: var(--dvr-card-transition, all 0.3s ease);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.dvr-media-card:hover {
+    border-color: var(--dvr-card-hover-border-color, var(--accent-primary, #00d4ff));
+    box-shadow: var(--dvr-card-hover-shadow, 0 8px 32px var(--accent-glow, rgba(0, 212, 255, 0.2)));
+    transform: var(--dvr-card-hover-transform, translateY(-4px));
+}
+
+.dvr-media-thumbnail {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: linear-gradient(135deg, var(--bg-tertiary, #2a2a2a) 0%, var(--bg-secondary, #1a1a1a) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.dvr-media-thumbnail-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.dvr-media-card:hover .dvr-media-thumbnail-img {
+    transform: scale(1.05);
+}
+
+.dvr-media-icon {
+    color: var(--text-muted, rgba(255, 255, 255, 0.3));
+    opacity: 0.5;
+}
+
+.dvr-media-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.dvr-media-card:hover .dvr-media-overlay {
+    opacity: 1;
+}
+
+.dvr-play-btn {
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-primary, #00d4ff);
+    border: none;
+    border-radius: 50%;
+    color: var(--bg-primary, #1a1a1a);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 20px var(--accent-glow, rgba(0, 212, 255, 0.4));
+    pointer-events: auto;
+    z-index: 10;
+}
+
+.dvr-play-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 30px var(--accent-glow, rgba(0, 212, 255, 0.6));
+}
+
+.dvr-media-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dvr-media-badge.completed {
+    background: rgba(46, 204, 113, 0.2);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.dvr-media-badge.failed {
+    background: rgba(231, 76, 60, 0.2);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.dvr-media-info {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+}
+
+.dvr-media-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #fff);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.dvr-media-channel {
+    font-size: 13px;
+    margin: 0;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.dvr-media-date {
+    font-size: 12px;
+    margin: 0;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.dvr-media-duration {
+    font-size: 12px;
+    margin: 4px 0 0 0;
+    color: var(--accent-primary, #00d4ff);
+    font-weight: 500;
+}
+
+.dvr-media-actions-top {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 12;
+}
+
+.dvr-media-delete,
+.dvr-media-rename,
+.dvr-media-convert {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s ease;
+}
+
+.dvr-media-card:hover .dvr-media-delete,
+.dvr-media-card:hover .dvr-media-rename,
+.dvr-media-card:hover .dvr-media-convert {
+    opacity: 1;
+}
+
+.dvr-media-delete:hover {
+    background: rgba(231, 76, 60, 0.8);
+    color: #fff;
+}
+
+.dvr-media-rename:hover,
+.dvr-media-convert:hover {
+    background: rgba(0, 212, 255, 0.8);
+    color: #fff;
+}
+
+/* ============================================
+   MODAL
+   ============================================ */
+.dvr-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--bg-overlay, rgba(0, 0, 0, 0.85));
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+    padding: 20px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.dvr-modal {
+    background: var(--surface-color, rgba(40, 40, 40, 0.85));
+    backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 20px)) saturate(var(--glass-saturation, 150%));
+    border: var(--glass-border, 1px solid rgba(255, 255, 255, 0.1));
+    box-shadow: var(--glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.5));
+    border-radius: 20px;
+    width: 100%;
+    max-width: 480px;
+    animation: slideUp 0.25s ease-out;
+    overflow: hidden;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.98);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.dvr-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+.dvr-modal-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #fff);
+}
+
+.dvr-modal-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-hover, rgba(60, 60, 60, 0.9));
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dvr-modal-close:hover {
+    background: var(--surface-active, rgba(80, 80, 80, 0.95));
+    color: var(--text-primary, #fff);
+}
+
+.dvr-modal-body {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dvr-modal-info {
+    padding: 16px;
+    background: var(--bg-tertiary, rgba(40, 40, 40, 0.9));
+    border-radius: 12px;
+}
+
+.dvr-modal-info h4 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: var(--text-primary, #fff);
+}
+
+.dvr-modal-info p {
+    font-size: 13px;
+    margin: 0;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.dvr-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.dvr-form-group label {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+}
+
+.dvr-form-control {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.dvr-form-control input[type="range"] {
+    flex: 1;
+    height: 6px;
+    background: var(--bg-tertiary, rgba(40, 40, 40, 0.9));
+    border-radius: 3px;
+    outline: none;
+    cursor: pointer;
+    -webkit-appearance: none;
+}
+
+.dvr-form-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--accent-primary, #00d4ff);
+    border-radius: 50%;
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.4));
+    transition: transform 0.2s ease;
+}
+
+.dvr-form-control input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.dvr-form-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-primary, #00d4ff);
+    min-width: 50px;
+    text-align: right;
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
+.dvr-form-hint {
+    font-size: 12px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.dvr-form-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    outline: none;
+    box-sizing: border-box;
+}
+
+.dvr-form-input:focus {
+    border-color: var(--accent-primary, #00d4ff);
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dvr-form-input option {
+    background-color: var(--surface-color, #1e1e1e);
+    color: var(--text-primary, #fff);
+}
+
+.dvr-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    background: var(--bg-secondary, rgba(30, 30, 30, 0.95));
+}
+
+.dvr-btn {
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: none;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dvr-btn.secondary {
+    background: var(--surface-hover, rgba(60, 60, 60, 0.9));
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+}
+
+.dvr-btn.secondary:hover {
+    background: var(--surface-active, rgba(80, 80, 80, 0.95));
+    color: var(--text-primary, #fff);
+}
+
+.dvr-btn.primary {
+    background: var(--accent-primary, #00d4ff);
+    color: var(--bg-primary, #1a1a1a);
+    font-weight: 600;
+}
+
+.dvr-btn.primary:hover:not(:disabled) {
+    box-shadow: 0 0 20px var(--accent-glow, rgba(0, 212, 255, 0.4));
+    transform: translateY(-1px);
+}
+
+.dvr-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ============================================
+   GLASS THEME OVERRIDES
+   ============================================ */
+[data-theme*="glass-"] .dvr-sidebar,
+[data-theme*="glass-"] .dvr-main-header {
+    background: var(--surface-color);
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+}
+
+[data-theme*="glass-"] .dvr-card,
+[data-theme*="glass-"] .dvr-media-card {
+    background: var(--surface-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme*="glass-"] .dvr-card:hover,
+[data-theme*="glass-"] .dvr-media-card:hover {
+    box-shadow: 0 8px 32px var(--accent-glow);
+}
+
+[data-theme*="glass-"] .dvr-modal {
+    background: var(--surface-color);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 1024px) {
+    .dvr-sidebar {
+        width: 220px;
+        min-width: 220px;
+    }
+
+    .dvr-card-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .dvr-dashboard {
+        flex-direction: column;
+    }
+
+    .dvr-sidebar {
+        width: 100%;
+        min-width: auto;
+        flex-direction: row;
+        padding: 16px;
+        border-right: none;
+        border-bottom: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+    }
+
+    .dvr-sidebar-header,
+    .dvr-sidebar-footer {
+        display: none;
+    }
+
+    .dvr-nav {
+        flex-direction: row;
+        flex: 1;
+    }
+
+    .dvr-nav-item {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .dvr-nav-label {
+        display: none;
+    }
+
+    .dvr-recorded-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================
+   DOWNLOADS TAB
+   ============================================ */
+.dvr-downloads {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.dvr-downloads-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color, #2a2a2a);
+    padding-bottom: 16px;
+}
+
+.dvr-downloads-stats {
+    font-size: 14px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    font-weight: 500;
+}
+
+.dvr-btn-clear {
+    background: transparent;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.dvr-btn-clear:hover {
+    background: var(--bg-hover, rgba(255, 255, 255, 0.05));
+    color: var(--text-primary, white);
+    border-color: var(--accent-primary, #00d4ff);
+}
+
+.dvr-downloads-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 20px;
+}
+
+.dvr-download-card {
+    background: var(--dvr-card-bg, var(--surface-color, rgba(40, 40, 40, 0.85)));
+    border: var(--dvr-card-border, 1px solid var(--surface-border, rgba(255, 255, 255, 0.1)));
+    border-radius: var(--dvr-card-radius, 16px);
+    padding: 20px;
+    transition: var(--dvr-card-transition, all 0.3s ease);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.dvr-download-card:hover {
+    border-color: var(--dvr-card-hover-border-color, var(--accent-primary, #00d4ff));
+    box-shadow: var(--dvr-card-hover-shadow, 0 4px 20px var(--accent-glow, rgba(0, 212, 255, 0.15)));
+    transform: var(--dvr-card-hover-transform, translateY(-2px));
+}
+
+.dvr-download-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.dvr-download-status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.dvr-download-status-badge.downloading {
+    background: rgba(0, 212, 255, 0.15);
+    color: var(--accent-primary, #00d4ff);
+    border: 1px solid var(--accent-glow, rgba(0, 212, 255, 0.3));
+}
+
+.dvr-download-status-badge.completed {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.dvr-download-status-badge.failed {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.dvr-download-status-badge.canceled {
+    background: rgba(140, 140, 140, 0.15);
+    color: #888;
+    border: 1px solid rgba(140, 140, 140, 0.3);
+}
+
+.dvr-download-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.dvr-download-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.dvr-download-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary, #fff);
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dvr-download-path {
+    font-size: 11px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.4));
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: monospace;
+}
+
+.dvr-download-progress-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.dvr-download-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    font-weight: 500;
+}
+
+.dvr-download-progress-percent {
+    font-weight: 600;
+    color: var(--accent-primary, #00d4ff);
+}
+
+.dvr-download-error {
+    font-size: 12px;
+    color: #e74c3c;
+    margin: 4px 0 0 0;
+}
+
+.dvr-progress-fill.downloads {
+    background: linear-gradient(90deg, #0088cc, #00d4ff);
+    box-shadow: 0 0 10px rgba(0, 212, 255, 0.4);
+}
+
+.dvr-progress-fill.downloads.extracting {
+    background: linear-gradient(90deg, #6366f1, #818cf8, #a5b4fc);
+    box-shadow: 0 0 12px rgba(129, 140, 248, 0.6);
+    animation: dvr-extracting-pulse 1.8s infinite ease-in-out;
+}
+
+@keyframes dvr-extracting-pulse {
+    0%, 100% { opacity: 0.85; }
+    50% { opacity: 1; }
+}
+
+[data-theme*="glass-"] .dvr-download-card {
+    background: var(--surface-color);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+[data-theme*="glass-"] .dvr-download-card:hover {
+    box-shadow: 0 8px 32px var(--accent-glow);
+}
+
+.dvr-downloads-search-input:focus {
+    border-color: var(--accent-primary, #00d4ff) !important;
+    box-shadow: 0 0 8px var(--accent-glow, rgba(0, 212, 255, 0.2));
+    background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* New Downloads Poster Layout */
+.dvr-download-card-content {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.dvr-download-poster {
+    width: 66px;
+    height: 99px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.dvr-download-card:hover .dvr-download-poster {
+    transform: scale(1.02);
+    border-color: var(--accent-primary, rgba(0, 212, 255, 0.4));
+}
+
+.dvr-download-poster-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.dvr-download-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Vertical grid layout when showPosters is active */
+.dvr-downloads-list.show-posters {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 24px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-card {
+    padding: 12px;
+    gap: 10px;
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Absolute header layout on card overlay */
+.dvr-downloads-list.show-posters .dvr-download-card-header {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    right: 20px;
+    z-index: 10;
+    justify-content: space-between;
+    pointer-events: none;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-actions,
+.dvr-downloads-list.show-posters .dvr-download-status-badge {
+    pointer-events: auto;
+}
+
+/* Actions buttons styling to pop nicely on top of the image */
+.dvr-downloads-list.show-posters .dvr-download-actions .dvr-btn-icon {
+    background: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    width: 32px;
+    height: 32px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-actions .dvr-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border-color: var(--accent-primary, #00d4ff) !important;
+    transform: scale(1.08);
+}
+
+.dvr-downloads-list.show-posters .dvr-download-card-content {
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-poster {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2/3;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dvr-downloads-list.show-posters .dvr-download-card-body {
+    width: 100%;
+    padding: 0 4px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-subtitle {
+    font-size: 11px;
+}
+
+.dvr-downloads-list.show-posters .dvr-download-path {
+    font-size: 9px;
+    opacity: 0.6;
+}
+
+/* Premium Glassmorphic Switch */
+.dvr-downloads-toggle-posters {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    cursor: pointer;
+    user-select: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: all 0.2s ease;
+}
+
+.dvr-downloads-toggle-posters:hover {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: var(--text-primary, #fff);
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"] {
+    position: relative;
+    width: 32px;
+    height: 18px;
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+    border-radius: 9px;
+    cursor: pointer;
+    transition: background 0.25s ease;
+    margin: 0;
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"]:checked {
+    background: var(--accent-primary, #00d4ff);
+    box-shadow: 0 0 8px var(--accent-glow, rgba(0, 212, 255, 0.4));
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"]::before {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.dvr-downloads-toggle-posters input[type="checkbox"]:checked::before {
+    transform: translateX(14px);
+}
+
+/* Modern Stats Chips */
+.dvr-downloads-stats-chips {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.dvr-downloads-stats-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.dvr-downloads-stats-chip:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-primary, #fff);
+}
+
+.dvr-downloads-stats-chip.downloading {
+    background: rgba(0, 212, 255, 0.08);
+    border-color: rgba(0, 212, 255, 0.15);
+    color: var(--accent-primary, #00d4ff);
+}
+
+.dvr-downloads-stats-chip.queued {
+    background: rgba(241, 196, 15, 0.06);
+    border-color: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+}
+
+.dvr-downloads-stats-chip.completed {
+    background: rgba(46, 204, 113, 0.06);
+    border-color: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+}
+
+.dvr-downloads-stats-chip.failed {
+    background: rgba(231, 76, 60, 0.06);
+    border-color: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+
+.dvr-downloads-stats-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.dvr-downloads-stats-dot.downloading {
+    background: var(--accent-primary, #00d4ff);
+    box-shadow: 0 0 6px var(--accent-primary, #00d4ff);
+    animation: pulse-dot 1.5s infinite ease-in-out;
+}
+
+.dvr-downloads-stats-dot.queued {
+    background: #f1c40f;
+}
+
+.dvr-downloads-stats-dot.completed {
+    background: #2ecc71;
+    box-shadow: 0 0 6px #2ecc71;
+}
+
+.dvr-downloads-stats-dot.failed {
+    background: #e74c3c;
+    box-shadow: 0 0 6px #e74c3c;
+}
+
+@keyframes pulse-dot {
+    0% {
+        transform: scale(0.9);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 1;
+        box-shadow: 0 0 10px var(--accent-primary, #00d4ff);
+    }
+    100% {
+        transform: scale(0.9);
+        opacity: 0.6;
+    }
+}
+
+.dvr-download-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    margin: 2px 0 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+
+
+/* Glassmorphic Convert Dropdown */
+.dvr-convert-dropdown {
+    position: absolute;
+    top: 38px;
+    left: 0;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 15;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.dvr-convert-dropdown button {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.9);
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+}
+
+.dvr-convert-dropdown button:hover {
+    background: rgba(0, 212, 255, 0.15);
+    color: #00d4ff;
+}
+
+/* Converting Glassmorphic Overlay */
+.dvr-media-converting-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(6px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 13;
+    gap: 12px;
+    color: #fff;
+    border-radius: 16px;
+}
+
+.dvr-converting-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 255, 255, 0.1);
+    border-top: 3px solid #00d4ff;
+    border-radius: 50%;
+    animation: dvr-spin 1s linear infinite;
+}
+
+.dvr-converting-text {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+@keyframes dvr-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   TOPBAR NAVIGATION
+   ============================================ */
+.dvr-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  width: 100%;
+  background: var(--dvr-topbar-bg, var(--bg-secondary, #13131a));
+  border-bottom: var(--dvr-topbar-border-bottom, 1px solid rgba(255, 255, 255, 0.08));
+  padding: 0 24px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  z-index: 100;
+  position: relative;
+}
+
+.dvr-topbar-left {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 150px;
+}
+
+.dvr-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dvr-brand-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--accent-primary, #e50914);
+  flex-shrink: 0;
+}
+
+.dvr-brand-name {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text-primary, #ffffff);
+}
+
+.dvr-topbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.dvr-topbar-item {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 16px;
+  transition: var(--dvr-topbar-item-transition, color 0.15s ease, background 0.15s ease);
+  box-sizing: border-box;
+}
+
+.dvr-topbar-item:hover {
+  color: var(--tb-item-active-color, var(--text-primary, #ffffff));
+  background: var(--dvr-topbar-item-hover-bg, rgba(255, 255, 255, 0.03));
+}
+
+.dvr-topbar-item.active {
+  color: var(--tb-item-active-color, var(--text-primary, #ffffff));
+}
+
+.dvr-topbar-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 12px;
+  right: 12px;
+  height: 3px;
+  background: var(--accent-primary, #e50914);
+  border-radius: 3px 3px 0 0;
+  box-shadow: var(--dvr-topbar-item-active-glow, none);
+}
+
+.dvr-topbar-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.dvr-topbar-badge {
+  background: var(--accent-primary, #e50914);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 14px;
+  text-align: center;
+  margin-left: 4px;
+}
+
+.dvr-topbar-badge-inactive {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dvr-topbar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Filter Bar */
+.dvr-filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    width: fit-content;
+}
+
+.dvr-filter-btn {
+    padding: 6px 14px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.dvr-filter-btn:hover {
+    color: var(--text-primary, #fff);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.dvr-filter-btn.active {
+    background: var(--accent-primary, #00d4ff);
+    color: #000;
+    font-weight: 600;
+    box-shadow: 0 2px 10px rgba(0, 212, 255, 0.3);
+}
+
+/* Recurrence display on cards */
+.dvr-card-recurrence {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+    padding-top: 12px;
+    border-top: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.recurrence-badge {
+    align-self: flex-start;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(155, 89, 182, 0.2);
+    color: #bb8fec;
+    border: 1px solid rgba(155, 89, 182, 0.3);
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.recurrence-occurrences {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.occurrences-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+    margin-bottom: 2px;
+}
+
+.occurrence-date {
+    font-size: 11.5px;
+    color: var(--text-muted, rgba(255, 255, 255, 0.55));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* DVR Settings Tab Elements */
+.dvr-path-input {
+    flex: 1;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-primary, rgba(255, 255, 255, 0.9));
+    font-size: 0.85rem;
+    font-family: monospace;
+}
+
+.dvr-browse-btn {
+    max-width: 120px;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dvr-setting-label {
+    font-size: 0.85rem;
+    color: var(--text-primary, rgba(255, 255, 255, 0.85));
+    font-weight: 500;
+}
+
+.dvr-sublabel {
+    font-size: 0.75rem;
+    color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+}
+
+.dvr-duration-badge {
+    font-size: 0.8rem;
+    color: var(--accent-primary, #00d4ff);
+    background: rgba(0, 212, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.dvr-range-slider {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+}
+
+.dvr-range-limits {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 0.75rem;
+    color: var(--text-muted, rgba(255, 255, 255, 0.4));
+}
+
+.dvr-custom-padding-box {
+    margin-top: 16px;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 10px 14px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dvr-number-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary, #fff);
+    font-size: 0.85rem;
+    outline: none;
+    padding: 2px 0;
+}
+
+.dvr-save-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border: 1px solid rgba(0, 212, 255, 0.4);
+    border-radius: 4px;
+    cursor: pointer;
+    outline: none;
+}
+
+.dvr-select-dropdown {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-primary, rgba(255, 255, 255, 0.9));
+    font-size: 0.85rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.dvr-select-dropdown option {
+    background: #1c1c1e;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.dvr-toggle-switch {
+    width: 46px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    display: block;
+    border-radius: 12px;
+    position: relative;
+    cursor: pointer;
+    transition: background 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+.dvr-toggle-switch span {
+    position: absolute;
+    top: 2px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    transition: left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.dvr-warning-msg {
+    color: #ff9900;
+}

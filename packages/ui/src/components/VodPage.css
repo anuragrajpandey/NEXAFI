@@ -1,0 +1,197 @@
+.vod-page {
+  position: fixed;
+  top: var(--page-top, 32px);
+  /* Below frameless title bar */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding-top: var(--page-pad-top, 0);
+  box-sizing: border-box;
+  background: var(--bg-primary, #0d0d0d);
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+  /* Prevent GPU compositor layers from blob background (z-index: 2) bleeding through */
+  isolation: isolate;
+}
+
+/* Search - refined Apple-style */
+.vod-page__search {
+  flex: 1;
+  max-width: 320px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 10px 14px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.vod-page__search:focus-within {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.vod-page__search svg {
+  width: 16px;
+  height: 16px;
+  color: rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
+}
+
+.vod-page__search input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 400;
+  outline: none;
+}
+
+.vod-page__search input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.vod-page__search button {
+  background: none;
+  border: none;
+  padding: 2px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.vod-page__search button:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.vod-page__search button svg {
+  width: 14px;
+  height: 14px;
+}
+
+
+
+/* Main content */
+.vod-page__content {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  /* Virtualized sub-views (VodBrowse, Home, Favorites, Local) manage their own internal scrolling */
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-surface-bg, var(--bg-primary, #0d0d0d));
+  backdrop-filter: var(--glass-surface-filter, none);
+  -webkit-backdrop-filter: var(--glass-surface-filter, none);
+  border: var(--glass-surface-border, none);
+  border-radius: var(--glass-panel-radius, 0);
+  box-shadow: var(--glass-surface-shadow, none);
+}
+
+.vod-page__content:hover,
+.vod-page__home:hover {
+  scrollbar-color: var(--scrollbar-hover-color, var(--accent-primary, #00d4ff)) transparent;
+}
+
+.vod-page__content::-webkit-scrollbar,
+.vod-page__content *::-webkit-scrollbar {
+  width: var(--app-scrollbar-width, var(--scrollbar-width, 6px));
+}
+
+.vod-page__content::-webkit-scrollbar-track,
+.vod-page__content *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vod-page__content::-webkit-scrollbar-thumb,
+.vod-page__content *::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 3px;
+}
+
+.vod-page__content::-webkit-scrollbar-thumb:hover,
+.vod-page__content *::-webkit-scrollbar-thumb:hover,
+.vod-page__content:hover::-webkit-scrollbar-thumb,
+.vod-page__content:hover *::-webkit-scrollbar-thumb,
+.vod-page__home:hover::-webkit-scrollbar-thumb,
+.vod-page__home::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, #00d4ff));
+}
+
+.vod-page__carousels {
+  padding-top: 24px;
+}
+
+/* Home view - scrollable container */
+.vod-page__home {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--bg-primary, #0d0d0d);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.vod-page__home::-webkit-scrollbar {
+  width: var(--app-scrollbar-width, var(--scrollbar-width, 6px));
+}
+
+.vod-page__home::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.vod-page__home::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 3px;
+}
+
+/* Wrapper for genre carousels in home view */
+.vod-page__carousel-slot {
+  /* No min-height - let content determine size */
+  /* Empty carousels will collapse, which is fine */
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vod-page__header {
+    padding: 12px 24px;
+    gap: 16px;
+  }
+
+  .vod-page__title {
+    font-size: 1.25rem;
+  }
+
+  .vod-page__search {
+    max-width: none;
+    margin-left: 0;
+    order: 3;
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .vod-page__categories {
+    padding: 8px 24px 16px;
+  }
+}
+
+/* Cast detail overlay in VOD tabs */
+.vod-cast-detail-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 210; /* Above detail modal (200) */
+  background: var(--color-canvas, #0c0d14);
+}

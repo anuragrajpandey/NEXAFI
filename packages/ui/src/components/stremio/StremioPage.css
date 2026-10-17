@@ -1,0 +1,59 @@
+.stremio-page {
+  position: fixed;
+  top: var(--page-top, 32px);
+  left: 0;
+  width: 100%;
+  height: var(--page-height, calc(100% - 32px));
+  padding-top: var(--page-pad-top, 0);
+  box-sizing: border-box;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: var(--glass-surface-bg, var(--bg-overlay, rgba(0, 0, 0, 0.85)));
+  backdrop-filter: var(--glass-surface-filter, blur(16px));
+  -webkit-backdrop-filter: var(--glass-surface-filter, blur(16px));
+  border: var(--glass-surface-border, none);
+  border-radius: var(--glass-panel-radius, 0);
+  box-shadow: var(--glass-surface-shadow, none);
+  -webkit-backdrop-filter: blur(16px);
+  overflow: hidden;
+}
+
+.stremio-main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+  background: var(--stremio-main-bg, transparent);
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.stremio-main:hover {
+  scrollbar-color: var(--scrollbar-hover-color, var(--accent-primary, rgba(0, 212, 255, 0.5))) transparent;
+}
+
+/* Custom themed scrollbar for main content area */
+.stremio-main::-webkit-scrollbar {
+  width: 6px;
+}
+
+.stremio-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.stremio-main::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.stremio-main::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-hover-color, var(--accent-primary, rgba(0, 212, 255, 0.5)));
+}
+
+.stremio-settings-container .settings-tab-content {
+  height: auto !important;
+  overflow-y: visible !important;
+}
+

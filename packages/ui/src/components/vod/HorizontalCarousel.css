@@ -1,0 +1,169 @@
+.carousel {
+  position: relative;
+  /* Use padding instead of margin - Virtuoso can't measure margins correctly */
+  margin-bottom: 0;
+  padding-bottom: 16px;
+  /* Fixed height for Virtuoso - all rows must be same size */
+  height: 366px;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty/hidden carousel - same height as normal for Virtuoso fixedItemHeight */
+.carousel--empty {
+  height: 366px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.carousel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  margin-bottom: 12px;
+}
+
+.carousel__title {
+  font-size: 1.125rem;
+  font-weight: 500;
+  color: var(--text-primary, #fff);
+  margin: 0;
+  letter-spacing: 0.01em;
+}
+
+.carousel__nav {
+  display: flex;
+  gap: 8px;
+}
+
+.carousel__nav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--vod-car-nav-radius, 4px);
+  background: var(--vod-car-nav-bg, var(--surface-color, rgba(255, 255, 255, 0.08)));
+  border: var(--vod-car-nav-border, 1px solid var(--surface-border, rgba(255, 255, 255, 0.1)));
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vod-car-nav-color, var(--text-secondary, rgba(255, 255, 255, 0.7)));
+  transition: var(--vod-car-nav-transition, background 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease);
+}
+
+.carousel__nav-btn:hover:not(:disabled) {
+  background: var(--vod-car-nav-hover-bg, var(--surface-hover, rgba(255, 255, 255, 0.12)));
+  color: var(--text-primary, #fff);
+  border-color: var(--vod-car-nav-hover-border, var(--accent-primary, rgba(255, 255, 255, 0.2)));
+  box-shadow: var(--vod-car-nav-hover-shadow, 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.1)));
+}
+
+.carousel__nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.carousel__nav-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Scroll container - themed scrollbar */
+.carousel__scroll-container {
+  flex: 1;
+  min-height: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.carousel__scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel__track {
+  display: flex;
+  gap: 12px;
+  padding: 4px 24px 12px;
+}
+
+/* Scroll fade indicators */
+.carousel__fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 24px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.carousel__fade--left {
+  left: 0;
+  background: var(--vod-car-fade-left, linear-gradient(to right, var(--bg-primary, #0d0d0d) 0%, transparent 100%));
+}
+
+.carousel__fade--right {
+  right: 0;
+  background: var(--vod-car-fade-right, linear-gradient(to left, var(--bg-primary, #0d0d0d) 0%, transparent 100%));
+}
+
+/* Loading skeletons */
+.media-card-skeleton {
+  flex-shrink: 0;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-color, #1a1a1a) 25%,
+    rgba(255, 255, 255, 0.05) 50%,
+    var(--surface-color, #1a1a1a) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.media-card-skeleton--small {
+  width: 120px;
+  height: calc(120px * 1.5 + 48px); /* poster + info height */
+}
+
+.media-card-skeleton--medium {
+  width: 160px;
+  height: calc(160px * 1.5 + 56px); /* matches MediaCard */
+}
+
+.media-card-skeleton--large {
+  width: 200px;
+  height: calc(200px * 1.5 + 64px); /* matches MediaCard */
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .carousel__header {
+    padding: 0 24px;
+  }
+
+  .carousel__track {
+    padding: 4px 24px 12px;
+    gap: 10px;
+  }
+
+  .carousel__fade {
+    width: 24px;
+  }
+
+  .carousel__title {
+    font-size: 1rem;
+  }
+}

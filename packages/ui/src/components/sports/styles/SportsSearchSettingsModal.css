@@ -1,0 +1,940 @@
+/* ==========================================================================
+   Sports Stream Search Settings Modal
+   Aligned with Manage Team Channels (TeamChannelSettings) UI/UX Design System
+   ========================================================================== */
+
+.sss-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: sssFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sssFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Modal Shell ────────────────────────────────────────────────────────── */
+.sss-modal {
+  display: flex;
+  flex-direction: column;
+  width: min(1040px, 94vw);
+  height: 820px;
+  max-height: 90vh;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.09));
+  border-radius: 18px;
+  background: var(--bg-primary, #111317);
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  animation: sssScaleIn 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sssScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── Modal Header ───────────────────────────────────────────────────────── */
+.sss-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.sss-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sss-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sss-modal-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(74, 125, 255, 0.12);
+  border: 1px solid rgba(74, 125, 255, 0.28);
+  color: var(--accent, #4a7dff);
+  flex-shrink: 0;
+}
+
+.sss-title-column {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sss-title-with-league {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sss-title {
+  margin: 0;
+  font-size: 1.22rem;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  color: var(--text-primary, #ffffff);
+}
+
+.sss-league-badge-top {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(74, 125, 255, 0.15);
+  border: 1px solid rgba(74, 125, 255, 0.35);
+  color: #93c5fd;
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.sss-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+  line-height: 1.4;
+}
+
+.sss-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 0.95rem;
+}
+
+.sss-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* ─── League & Category Selector Strip ───────────────────────────────────── */
+.sss-league-selector-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 24px;
+  background: rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+}
+
+/* Sport category filter pills - wrapping naturally into 1 or 2 lines */
+.sss-category-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+.sss-category-pill {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.65));
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sss-category-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.sss-category-pill.active {
+  background: rgba(74, 125, 255, 0.16);
+  border-color: rgba(74, 125, 255, 0.4);
+  color: #93c5fd;
+}
+
+/* League selector pills - wrapping naturally into lines, NO horizontal scrollbars */
+.sss-leagues-pills-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  overflow: visible;
+  max-height: 90px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.sss-league-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary, #ffffff);
+  font-size: 0.84rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.sss-league-pill:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.sss-league-pill.active {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.35) 0%, rgba(37, 99, 235, 0.28) 100%);
+  border-color: rgba(96, 165, 250, 0.6);
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.25);
+}
+
+.sss-league-pill-custom-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+/* ─── Nav Tabs ───────────────────────────────────────────────────────────── */
+.sss-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  background: rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+}
+
+.sss-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sss-nav-tab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sss-nav-tab.active {
+  color: #93c5fd;
+  background: rgba(74, 125, 255, 0.12);
+  border-color: rgba(74, 125, 255, 0.3);
+}
+
+.sss-badge-pill {
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: inherit;
+}
+
+.sss-nav-tab.active .sss-badge-pill {
+  background: rgba(74, 125, 255, 0.25);
+  color: #bfdbfe;
+}
+
+/* ─── Content Body ───────────────────────────────────────────────────────── */
+.sss-content-body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-hover, rgba(255, 255, 255, 0.15)) transparent;
+}
+
+.sss-content-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sss-content-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sss-content-body::-webkit-scrollbar-thumb {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.15));
+  border-radius: 4px;
+}
+
+.sss-content-body::-webkit-scrollbar-thumb:hover {
+  background: var(--accent, #4a7dff);
+}
+
+.sss-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sss-section-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+}
+
+.sss-section-header p {
+  margin: 4px 0 0;
+  font-size: 0.84rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+}
+
+/* ─── Toolbar Strip ──────────────────────────────────────────────────────── */
+.sss-filter-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.sss-toolbar-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.55));
+  font-weight: 500;
+}
+
+/* ─── Checkbox Grid (Sources) ────────────────────────────────────────────── */
+.sss-checkbox-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.sss-checkbox-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sss-checkbox-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.sss-checkbox-card.checked {
+  background: rgba(74, 125, 255, 0.1);
+  border-color: rgba(74, 125, 255, 0.35);
+}
+
+.sss-checkbox-card input[type="checkbox"],
+.sss-source-group-checkbox input[type="checkbox"],
+.sss-category-row input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sss-checkbox-custom {
+  width: 17px;
+  height: 17px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.3);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+input[type="checkbox"]:checked + .sss-checkbox-custom {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+input[type="checkbox"]:checked + .sss-checkbox-custom::after {
+  content: '';
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-0.5px, -0.5px);
+}
+
+.sss-checkbox-label {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sss-source-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-primary, #ffffff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Category Controls ──────────────────────────────────────────────────── */
+.sss-category-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sss-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.sss-search-wrap svg {
+  position: absolute;
+  left: 12px;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.4));
+  pointer-events: none;
+}
+
+.sss-search-input {
+  width: 100%;
+  padding: 9px 34px 9px 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--bg-secondary, #1a1d24);
+  color: var(--text-primary, #ffffff);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sss-search-input:focus {
+  border-color: var(--accent, #4a7dff);
+  box-shadow: 0 0 0 2px rgba(74, 125, 255, 0.2);
+}
+
+.sss-search-clear {
+  position: absolute;
+  right: 10px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.sss-search-clear:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.sss-category-preset-strip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.sss-btn-mini {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sss-btn-mini:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.sss-btn-mini.active {
+  background: rgba(74, 125, 255, 0.16);
+  border-color: rgba(74, 125, 255, 0.4);
+  color: #93c5fd;
+}
+
+.sss-btn-mini.highlight {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #6ee7b7;
+}
+
+.sss-btn-mini.highlight:hover {
+  background: rgba(16, 185, 129, 0.22);
+  color: #a7f3d0;
+}
+
+.sss-expand-collapse-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sss-btn-mini-link {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.sss-btn-mini-link:hover {
+  color: #93c5fd;
+  background: rgba(74, 125, 255, 0.08);
+}
+
+.sss-divider-dot {
+  color: rgba(255, 255, 255, 0.2);
+  font-size: 0.7rem;
+}
+
+.sss-category-count-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+  padding: 0 4px;
+}
+
+/* ─── Category Accordions by Source ──────────────────────────────────────── */
+.sss-categories-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.sss-source-category-group {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.sss-source-category-group.is-expanded {
+  border-color: rgba(74, 125, 255, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.sss-source-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.sss-source-group-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.sss-source-group-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sss-source-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.5));
+  transition: transform 0.2s ease;
+}
+
+.sss-source-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.sss-source-group-checkbox {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.sss-source-group-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary, #ffffff);
+}
+
+.sss-source-total-count {
+  font-size: 0.78rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+}
+
+.sss-source-group-right {
+  display: flex;
+  align-items: center;
+}
+
+.sss-source-group-badge {
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.sss-source-group-badge.active {
+  background: rgba(74, 125, 255, 0.18);
+  color: #93c5fd;
+  border: 1px solid rgba(74, 125, 255, 0.3);
+}
+
+.sss-source-group-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 6px;
+  padding: 10px 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.sss-category-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sss-category-row:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.sss-category-row.selected {
+  background: rgba(74, 125, 255, 0.12);
+  border-color: rgba(74, 125, 255, 0.3);
+}
+
+.sss-category-row-info {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  overflow: hidden;
+}
+
+.sss-cat-name {
+  font-size: 0.82rem;
+  font-weight: 550;
+  color: var(--text-primary, #ffffff);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sss-cat-count {
+  font-size: 0.72rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.4));
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
+.sss-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 36px 16px;
+  font-size: 0.86rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.45));
+}
+
+/* ─── Modal Footer ───────────────────────────────────────────────────────── */
+.sss-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+}
+
+.sss-btn-reset {
+  padding: 8px 14px;
+  border-radius: 9px;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sss-btn-reset:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: #fecaca;
+}
+
+.sss-btn-reset:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.sss-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sss-btn-cancel {
+  padding: 8px 16px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sss-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.sss-btn-save {
+  padding: 8px 20px;
+  border-radius: 9px;
+  border: 1px solid rgba(74, 125, 255, 0.4);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+}
+
+.sss-btn-save:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+}
+
+/* ==========================================================================
+   LIGHT THEME OVERRIDES
+   The base styles are tuned for dark surfaces. When the light theme is active
+   the modal shell (var(--bg-primary)) turns light, so remap the hardcoded
+   white-tinted surfaces and white/light accent text to dark-based equivalents.
+   ========================================================================== */
+
+/* Modal shell — softer shadow/ring on light bg */
+html[data-theme="light"] .sss-modal {
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+html[data-theme="light"] .sss-header,
+html[data-theme="light"] .sss-footer {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Dark selector bands become light so var()-based dark text stays legible */
+html[data-theme="light"] .sss-league-selector-section {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+html[data-theme="light"] .sss-source-group-items {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+/* White-tinted surfaces -> black-tinted */
+html[data-theme="light"] .sss-nav-tabs,
+html[data-theme="light"] .sss-filter-toolbar,
+html[data-theme="light"] .sss-checkbox-card,
+html[data-theme="light"] .sss-btn-mini,
+html[data-theme="light"] .sss-category-pill,
+html[data-theme="light"] .sss-league-pill,
+html[data-theme="light"] .sss-source-category-group,
+html[data-theme="light"] .sss-source-group-badge,
+html[data-theme="light"] .sss-category-row,
+html[data-theme="light"] .sss-btn-cancel {
+  background: rgba(0, 0, 0, 0.035);
+}
+
+html[data-theme="light"] .sss-checkbox-card:hover,
+html[data-theme="light"] .sss-source-group-header:hover,
+html[data-theme="light"] .sss-category-row:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* Borders — white-tint borders vanish on a light shell */
+html[data-theme="light"] .sss-nav-tabs,
+html[data-theme="light"] .sss-filter-toolbar,
+html[data-theme="light"] .sss-checkbox-card,
+html[data-theme="light"] .sss-btn-mini,
+html[data-theme="light"] .sss-category-pill,
+html[data-theme="light"] .sss-league-pill,
+html[data-theme="light"] .sss-source-category-group,
+html[data-theme="light"] .sss-category-row,
+html[data-theme="light"] .sss-search-input,
+html[data-theme="light"] .sss-btn-cancel {
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Hover / active states */
+html[data-theme="light"] .sss-close-btn:hover,
+html[data-theme="light"] .sss-category-pill:hover,
+html[data-theme="light"] .sss-nav-tab:hover,
+html[data-theme="light"] .sss-btn-mini:hover,
+html[data-theme="light"] .sss-btn-cancel:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-primary, #1a1a1a);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+html[data-theme="light"] .sss-league-pill:hover {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+html[data-theme="light"] .sss-search-clear {
+  background: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.65);
+}
+
+html[data-theme="light"] .sss-search-clear:hover {
+  background: rgba(0, 0, 0, 0.16);
+  color: var(--text-primary, #1a1a1a);
+}
+
+/* Light accent text (blue/green) -> darker shades for contrast on light bg */
+html[data-theme="light"] .sss-league-badge-top,
+html[data-theme="light"] .sss-nav-tab.active,
+html[data-theme="light"] .sss-btn-mini.active,
+html[data-theme="light"] .sss-btn-mini-link:hover,
+html[data-theme="light"] .sss-source-group-badge.active,
+html[data-theme="light"] .sss-category-pill.active {
+  color: #2563eb;
+}
+
+html[data-theme="light"] .sss-nav-tab.active .sss-badge-pill {
+  background: rgba(37, 99, 235, 0.15);
+  color: #1d4ed8;
+}
+
+html[data-theme="light"] .sss-btn-mini.highlight {
+  color: #059669;
+}
+
+html[data-theme="light"] .sss-btn-mini.highlight:hover {
+  color: #047857;
+}
+
+html[data-theme="light"] .sss-divider-dot {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+/* Danger / reset button — light red is unreadable on light bg */
+html[data-theme="light"] .sss-btn-reset {
+  color: #dc2626;
+}
+
+html[data-theme="light"] .sss-btn-reset:hover:not(:disabled) {
+  color: #b91c1c;
+}

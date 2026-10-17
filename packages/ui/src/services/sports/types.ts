@@ -1,0 +1,610 @@
+/**
+ * Sports API Types
+ *
+ * Type definitions for ESPN API responses and domain models
+ */
+
+import type { SportsEvent, SportsTeam, SportsLeague, SportsBroadcastChannel } from '@ynotv/core';
+
+export type { SportsEvent, SportsTeam, SportsLeague, SportsBroadcastChannel };
+
+// ESPN API Response Types
+export interface ESPNEvent {
+  id: string;
+  uid: string;
+  name: string;
+  shortName: string;
+  date: string;
+  status: {
+    type: {
+      name: string;
+      state: string;
+      shortDetail: string;
+      detail: string;
+    };
+    displayClock: string;
+    period: number;
+  };
+  competitions: Array<{
+    id: string;
+    uid?: string;
+    date?: string;
+    startDate?: string;
+    endDate?: string;
+    order?: number;
+    competitors: Array<{
+      id: string;
+      uid: string;
+      homeAway?: string;
+      order?: number;
+      winner?: boolean;
+      score?: string | { value: number; displayValue: string };
+      records?: Array<{ summary: string; }>;
+      team?: {
+        id: string;
+        uid: string;
+        location: string;
+        name: string;
+        abbreviation: string;
+        displayName: string;
+        shortDisplayName: string;
+        logo?: string;
+        logos?: Array<{ href: string; }>;
+      };
+      type?: string;
+      athlete?: {
+        id: string;
+        uid: string;
+        fullName: string;
+        displayName: string;
+        shortName: string;
+        flag?: { href: string; alt: string };
+        headshot?: { href: string };
+        record?: Array<{ summary: string }>;
+      };
+    }>;
+    broadcasts?: Array<{
+      market: string;
+      names: string[];
+    }>;
+    venue?: {
+      fullName: string;
+    };
+    status?: {
+      clock: number;
+      displayClock: string;
+      period: number;
+      type: {
+        id: string;
+        name: string;
+        state: string;
+        completed: boolean;
+        description: string;
+        detail: string;
+        shortDetail: string;
+      };
+    };
+    type?: {
+      id: string;
+      abbreviation: string;
+    };
+  }>;
+  season?: {
+    year: number;
+    type: number;
+  };
+  week?: number;
+  // Tennis: matches grouped by draw type (mens-singles, womens-singles, etc.)
+  groups?: Array<{
+    grouping: {
+      id: string;
+      slug: string;
+      displayName: string;
+    };
+    competitions: Array<{
+      id: string;
+      uid?: string;
+      date?: string;
+      startDate?: string;
+      status?: {
+        type: {
+          name: string;
+          state: string;
+          completed: boolean;
+          description: string;
+          detail: string;
+          shortDetail: string;
+        };
+        displayClock?: string;
+        period?: number;
+      };
+      competitors: Array<{
+        id: string;
+        uid: string;
+        athlete?: {
+          id: string;
+          displayName: string;
+          shortName: string;
+          flag?: { href: string; alt: string };
+          headshot?: { href: string };
+        };
+        score?: string | { value: number; displayValue: string };
+        winner?: boolean;
+      }>;
+      linescores?: Array<{
+        value?: number;
+        displayValue?: string;
+        period?: number;
+      }>;
+      venue?: { fullName: string };
+      broadcasts?: Array<{
+        market: string;
+        names: string[];
+      }>;
+    }>;
+  }>;
+}
+
+export interface ESPTeam {
+  id: string;
+  uid: string;
+  location: string;
+  name: string;
+  abbreviation: string;
+  displayName: string;
+  shortDisplayName: string;
+  logo?: string;
+  logos?: Array<{ href: string; }>;
+  record?: { items: Array<{ summary: string; }>; };
+  nextEvent?: ESPNEvent[];
+}
+
+export interface ESPNLeague {
+  id: string;
+  uid: string;
+  name: string;
+  abbreviation: string;
+  slug: string;
+}
+
+// Core API league types (sports.core.api.espn.com)
+export interface CoreLeagueLogo {
+  href: string;
+  rel?: string[];
+  width?: number;
+  height?: number;
+}
+
+export interface CoreLeagueResponse {
+  id: string;
+  slug?: string;
+  name?: string;
+  displayName?: string;
+  logos?: CoreLeagueLogo[];
+}
+
+// Sport Configuration
+export interface SportConfig {
+  sport: string;
+  league: string;
+  name: string;
+  category: string;
+}
+
+// Team Types
+export interface TeamRecord {
+  overall: string;
+  home: string;
+  away: string;
+  wins: number;
+  losses: number;
+  ties?: number;
+  winPercent?: number;
+  pointsFor?: number;
+  pointsAgainst?: number;
+  pointDifferential?: number;
+  avgPointsFor?: number;
+  avgPointsAgainst?: number;
+}
+
+export interface TeamAthlete {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  jersey?: string;
+  position: string;
+  positionAbbrev?: string;
+  headshot?: string;
+  height?: string;
+  weight?: string;
+  age?: number;
+  experience?: string;
+  college?: string;
+}
+
+export interface TeamDetails {
+  id: string;
+  name: string;
+  shortName: string;
+  location: string;
+  abbreviation: string;
+  color: string;
+  alternateColor: string;
+  logo?: string;
+  record?: TeamRecord;
+  standingSummary?: string;
+  nextEvent?: SportsEvent;
+  athletes: TeamAthlete[];
+}
+
+// Standings Types
+export interface StandingTeam {
+  id: string;
+  name: string;
+  shortName?: string;
+  logo?: string;
+  wins: number;
+  losses: number;
+  ties?: number;
+  winPercent: string;
+  winPercentValue: number;
+  gamesBehind?: string;
+  streak?: string;
+  division?: string;
+  rank: number;
+}
+
+export interface StandingGroup {
+  name: string;
+  isConference: boolean;
+  teams: StandingTeam[];
+}
+
+// UFC Rankings
+export interface UFCWeightClassRanking {
+  weightClass: string;
+  champion?: {
+    id: string;
+    name: string;
+    record?: string;
+    headshot?: string;
+  };
+  rankedFighters: Array<{
+    rank: number;
+    id: string;
+    name: string;
+    record?: string;
+    headshot?: string;
+  }>;
+}
+
+// Game Summary Types
+export interface TeamStatistics {
+  label: string;
+  displayValue: string;
+}
+
+export interface PlayerStat {
+  athleteId: string;
+  name: string;
+  headshot?: string;
+  jersey?: string;
+  stats: string[];
+}
+
+export interface PlayerStatCategory {
+  name: string;
+  text: string;
+  labels: string[];
+  descriptions?: string[];
+  athletes: PlayerStat[];
+}
+
+export interface GameSummaryTeam {
+  id: string;
+  name: string;
+  shortName: string;
+  logo?: string;
+  score: number;
+  record?: string;
+  statistics: TeamStatistics[];
+  playerStats: PlayerStatCategory[];
+}
+
+export interface ScoringPlay {
+  id: string;
+  period: string;
+  clock: string;
+  text: string;
+  homeScore: number;
+  awayScore: number;
+  scoringType?: string;
+  teamId?: string;
+}
+
+export interface MatchEvent {
+  id: string;
+  type: string;
+  period: string;
+  clock: string;
+  text: string;
+  homeScore: number;
+  awayScore: number;
+  teamId?: string;
+  isScoring: boolean;
+}
+
+export interface GameSummary {
+  id: string;
+  title: string;
+  date: Date;
+  status: SportsEvent['status'];
+  statusDetail: string;
+  venue?: {
+    name: string;
+    city?: string;
+  };
+  attendance?: number;
+  officials?: string[];
+  broadcasts?: string[];
+  homeTeam: GameSummaryTeam;
+  awayTeam: GameSummaryTeam;
+  scoringPlays: ScoringPlay[];
+  matchEvents?: MatchEvent[];
+  winProbability?: Array<{
+    homeWinPercentage: number;
+    playId: string;
+  }>;
+}
+
+// Play-by-Play Types
+export interface PlayByPlay {
+  teams: { home: string; away: string };
+  periods: PlayPeriod[];
+}
+
+export interface PlayPeriod {
+  period: number;
+  label: string;
+  plays: Play[];
+}
+
+export interface Play {
+  id: string;
+  type: string;
+  text: string;
+  awayScore: number;
+  homeScore: number;
+  clock: string;
+  teamId?: string;
+  scoringPlay?: boolean;
+}
+
+// News Types
+export interface NewsArticle {
+  id: string;
+  title: string;
+  description: string;
+  link: string;
+  image?: string;
+  source?: string;
+  published?: Date;
+  type: string;
+  leagueId: string;
+}
+
+// Rankings Types
+export interface Ranking {
+  rank: number;
+  team: {
+    id: string;
+    name: string;
+    shortName: string;
+    logo?: string;
+  };
+  record: string;
+  points?: number;
+  previousRank?: number;
+  firstPlaceVotes?: number;
+  trend: 'up' | 'down' | 'same' | 'new';
+}
+
+export interface RankingsList {
+  id: string;
+  name: string;
+  shortName: string;
+  type: string;
+  headline: string;
+  week: string;
+  year: number;
+  rankings: Ranking[];
+}
+
+// Leaders Types
+export interface LeagueLeader {
+  rank: number;
+  athlete: {
+    id: string;
+    name: string;
+    headshot?: string;
+    position?: string;
+  };
+  team: {
+    id: string;
+    name: string;
+    shortName: string;
+    logo?: string;
+  };
+  stat: string;
+  value: string;
+  displayValue: string;
+}
+
+export interface LeadersCategory {
+  name: string;
+  displayName: string;
+  shortDisplayName?: string;
+  leaders: LeagueLeader[];
+}
+
+// Individual Sports Rankings Types
+
+// Golf - World Golf Rankings
+export interface GolfRanking {
+  rank: number;
+  athlete: {
+    id: string;
+    name: string;
+    flag?: string;
+  };
+  totalPoints: number;
+  numEvents: number;
+  avgPoints: number;
+}
+
+// Tennis - ATP/WTA Rankings
+export interface TennisRanking {
+  rank: number;
+  athlete: {
+    id: string;
+    name: string;
+    flag?: string;
+  };
+  points: number;
+  previousRank?: number;
+}
+
+// Racing - Driver Standings
+export interface RacingStanding {
+  rank: number;
+  driver: {
+    id: string;
+    name: string;
+    team: string;
+    flag?: string;
+    headshot?: string;
+  };
+  points: number;
+  wins: number;
+  podiums: number;
+}
+
+// Depth Chart Types
+export interface DepthChartAthlete {
+  id: string;
+  name: string;
+  shortName?: string;
+  jersey?: string;
+  rank: number;
+  headshot?: string;
+  position?: string;
+}
+
+export interface DepthChartPosition {
+  name: string;
+  displayName: string;
+  abbreviation: string;
+  athletes: DepthChartAthlete[];
+}
+
+export interface DepthChartGroup {
+  id: string;
+  name: string; // e.g. "Offense", "Defense", "Special Teams"
+  positions: DepthChartPosition[];
+}
+
+// Injury Types
+export interface TeamInjury {
+  id: string;
+  athleteId: string;
+  athleteName: string;
+  position?: string;
+  headshot?: string;
+  jersey?: string;
+  status: string; // e.g. "Out", "Questionable", "Doubtful", "IR"
+  date?: string;
+  comment?: string;
+  shortComment?: string;
+  returnDate?: string;
+  location?: string;
+  type?: string;
+}
+
+// Team Leaders Types
+export interface TeamLeader {
+  athleteId: string;
+  name: string;
+  jersey?: string;
+  headshot?: string;
+  position?: string;
+  valueDisplay: string;
+  statName?: string;
+}
+
+export interface TeamLeaderCategory {
+  name: string;
+  displayName: string;
+  shortDisplayName: string;
+  abbreviation?: string;
+  leaders: TeamLeader[];
+}
+
+// Team News Types
+export interface TeamNewsArticle {
+  id: string;
+  headline: string;
+  description?: string;
+  published?: string;
+  imageUrl?: string;
+  link?: string;
+}
+
+// Athlete Details & Profile Types
+export interface AthleteBio {
+  id: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  jersey?: string;
+  position?: string;
+  positionAbbrev?: string;
+  teamId?: string;
+  teamName?: string;
+  teamLogo?: string;
+  headshot?: string;
+  height?: string;
+  weight?: string;
+  age?: number;
+  birthDate?: string;
+  experience?: string;
+  college?: string;
+  draftSummary?: string;
+  injuryStatus?: string;
+}
+
+export interface AthleteStatSplit {
+  category: string; // e.g. "Regular Season 2025", "Career"
+  labels: string[];
+  rows: Array<{
+    title?: string;
+    stats: string[];
+  }>;
+}
+
+export interface AthleteGameLogRow {
+  id: string;
+  gameDate: string;
+  opponentName: string;
+  opponentLogo?: string;
+  atVs: string;
+  gameResult: string;
+  score: string;
+  stats: string[];
+}
+
+export interface AthleteGameLogData {
+  labels: string[];
+  rows: AthleteGameLogRow[];
+}
+

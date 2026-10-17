@@ -1,0 +1,2037 @@
+import type { Channel, Category, Season, Episode } from '@ynotv/core';
+import CryptoJS from 'crypto-js';
+import { universalFetch, universalFetchJson } from './fetch-utils';
+import {
+    STALKER_MAX_RETRIES,
+    STALKER_TIMEOUT_MS,
+    STALKER_RETRY_BACKOFF_BASE_MS,
+    STALKER_TOKEN_VALIDITY_SECONDS,
+    STALKER_MAX_HANDSHAKE_ATTEMPTS,
+    STALKER_HANDSHAKE_RETRY_DELAY_MS,
+} from './stalker-constants';
+
+export interface StalkerConfig {
+    baseUrl: string;
+    mac: string;
+    userAgent?: string;
+}
+
+export interface StalkerHandshakeResponse {
+    js: {
+        token: string;
+    };
+}
+
+interface StalkerResponse<T> {
+    js: T;
+}
+
+/**
+ * Progress reported while paginating a Stalker VOD/series category.
+ * currentPage/totalPages are 1-indexed and only set once known — Stalker
+ * portals that return `total_items`/`pages` metadata enable the "Page X of Y"
+ * display; portals that don't get an indeterminate "Page X" instead.
+ */
+export type StalkerPageProgress = (
+    percent: number,
+    currentPage?: number,
+    totalPages?: number
+) => void;
+
+interface StalkerGenre {
+    id: string;
+    title: string;
+    alias?: string;
+    censored?: string | number;
+}
+
+export interface StalkerCatchupOptions {
+    startTimeMs: number;
+    durationMinutes: number;
+    programId?: string;
+}
+
+export class StalkerClient {
+    // Shared tokens and refresh promises across all client instances of a source
+    private static globalTokens = new Map<string, { token: string; timestamp: number }>();
+    private static globalRefreshPromises = new Map<string, Promise<void>>();
+
+    private config: StalkerConfig;
+    private sourceId: string;
+    private token: string | null = null;
+    private tokenTimestamp: number = 0;
+    private random: string = '';
+    private serial: string = '';
+    private deviceId: string = ''; // SHA256 of MAC
+    private deviceId2: string = '';
+    private originalUrl: string = ''; // Store original URL for fallback attempts
+    private fallbackUrls: string[] = []; // List of URLs to try
+    private tokenRefreshPromise: Promise<void> | null = null; // Lock to prevent concurrent token refreshes
+
+    /**
+     * Normalize Stalker censored/lock fields to boolean.
+     * Stalker APIs inconsistently return censored as "1", 1, 0, or "".
+     */
+    private isCensored(censored?: string | number, lock?: number): boolean {
+        return censored === 1 || censored === '1' || lock === 1;
+    }
+
+    constructor(config: StalkerConfig, sourceId: string) {
+        this.sourceId = sourceId;
+        this.originalUrl = config.baseUrl.replace(/\/+$/, '');
+
+        // Generate list of fallback URLs to try in order
+        this.fallbackUrls = this.generateFallbackUrls(this.originalUrl);
+
+        // Start with the first fallback URL
+        this.config = {
+            ...config,
+            baseUrl: this.fallbackUrls[0],
+        };
+
+        console.log(`[Stalker] Original URL: ${this.originalUrl}`);
+        console.log(`[Stalker] Trying: ${this.config.baseUrl}`);
+        console.log(`[Stalker] Fallback URLs available: ${this.fallbackUrls.slice(1).join(', ') || 'none'}`);
+
+        // Initialize device identity
+        this.serial = this.generateSerial(this.config.mac);
+        this.deviceId = this.generateDeviceId(this.config.mac);
+        this.deviceId2 = this.deviceId;
+    }
+
+    private generateSerial(mac: string): string {
+        return CryptoJS.MD5(mac).toString().substring(0, 13).toUpperCase();
+    }
+
+    private generateDeviceId(mac: string): string {
+        return CryptoJS.SHA256(mac).toString().toUpperCase();
+    }
+
+    private generateSignature(): string {
+        const data = `${this.config.mac}${this.serial}${this.deviceId}${this.deviceId2}`;
+        return CryptoJS.SHA256(data).toString().toUpperCase();
+    }
+
+    private generateRandomValue(): string {
+        return CryptoJS.lib.WordArray.random(20).toString(CryptoJS.enc.Hex);
+    }
+
+    /**
+     * Generates a list of fallback URLs to try in order
+     * This allows automatic failover when one endpoint returns 404
+     */
+    private generateFallbackUrls(url: string): string[] {
+        const urlObj = new URL(url.startsWith('http') ? url : `http://${url}`);
+        const baseUrl = `${urlObj.protocol}//${urlObj.host}`;
+        const path = urlObj.pathname;
+
+        const fallbacks: string[] = [];
+
+        // Pattern 1: If URL ends with /c or /c/, try /portal.php first
+        if (path === '/c' || path === '/c/') {
+            fallbacks.push(`${baseUrl}/portal.php`);
+            fallbacks.push(`${baseUrl}/stalker_portal/server/load.php`);
+        }
+        // Pattern 2: If URL contains /stalker_portal, prioritize that path
+        else if (path.includes('/stalker_portal')) {
+            if (path === '/stalker_portal' || path === '/stalker_portal/') {
+                fallbacks.push(`${baseUrl}/stalker_portal/server/load.php`);
+            } else if (path.endsWith('/c')) {
+                fallbacks.push(url.replace(/\/stalker_portal\/c$/, '/stalker_portal/server/load.php'));
+            } else {
+                fallbacks.push(url); // Already has a path, keep it
+            }
+            fallbacks.push(`${baseUrl}/portal.php`);
+        }
+        // Pattern 3: Bare domain or root path - try common patterns
+        else if (!path || path === '/') {
+            fallbacks.push(`${baseUrl}/stalker_portal/server/load.php`);
+            fallbacks.push(`${baseUrl}/portal.php`);
+            fallbacks.push(`${baseUrl}/c/`);
+        }
+        // Pattern 4: Custom path - keep it and add common fallbacks
+        else {
+            fallbacks.push(url);
+            fallbacks.push(`${baseUrl}/stalker_portal/server/load.php`);
+            fallbacks.push(`${baseUrl}/portal.php`);
+        }
+
+        // Remove duplicates while preserving order
+        return [...new Set(fallbacks)];
+    }
+
+    /**
+     * Try the next fallback URL if available
+     * Returns true if a fallback was available and applied
+     */
+    private tryNextFallbackUrl(): boolean {
+        const currentIndex = this.fallbackUrls.indexOf(this.config.baseUrl);
+        if (currentIndex >= 0 && currentIndex < this.fallbackUrls.length - 1) {
+            this.config.baseUrl = this.fallbackUrls[currentIndex + 1];
+            console.log(`[Stalker] Trying fallback URL: ${this.config.baseUrl}`);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Extract items + page metadata from a get_ordered_list response.
+     * Most Stalker portals return `{ data: [...], total_items, max_page_items, pages }`
+     * (wrapped in `js` by fetchStalker), which lets us show "Page X of Y" while
+     * lazy-loading a category. Portals that omit the metadata just get an
+     * indeterminate page count.
+     */
+    private extractOrderedList(raw: any): {
+        items: any[];
+        total_items?: number;
+        max_page_items?: number;
+        pages?: number;
+    } {
+        let obj = raw;
+        // fetchStalker unwraps `js`, but some portals double-wrap: { js: { data: [...] } }
+        if (obj && obj.js && Array.isArray(obj.js.data)) {
+            obj = obj.js;
+        }
+        if (Array.isArray(obj)) {
+            return { items: obj };
+        }
+        if (obj && Array.isArray(obj.data)) {
+            return {
+                items: obj.data,
+                total_items: obj.total_items != null ? Number(obj.total_items) : undefined,
+                max_page_items: obj.max_page_items != null ? Number(obj.max_page_items) : undefined,
+                pages: obj.pages != null ? Number(obj.pages) : undefined,
+            };
+        }
+        return { items: [] };
+    }
+
+    /**
+     * Safely extract array data from Stalker API response
+     * Python equivalent: safe_json_list()
+     */
+    private safeJsonList<T>(data: any, expectedKey: string = 'js'): T[] {
+        if (!data) {
+            console.warn('[Stalker] safeJsonList: No data provided');
+            return [];
+        }
+
+        // If data is already an array, return it
+        if (Array.isArray(data)) {
+            return data as T[];
+        }
+
+        // Extract from expected key (usually 'js')
+        let extracted = data[expectedKey] ?? data;
+
+        // Handle falsy values (false, null, undefined) as empty
+        if (extracted === false || extracted === null || extracted === undefined) {
+            console.warn(`[Stalker] ${expectedKey} field is ${extracted}, returning empty list`);
+            return [];
+        }
+
+        // If extracted is an object (not array), it might be:
+        // 1. Empty response: {} -> return []
+        // 2. Single item: {id: "1", ...} -> return [{id: "1", ...}]
+        if (typeof extracted === 'object' && !Array.isArray(extracted)) {
+            // Check if it's an empty object
+            if (Object.keys(extracted).length === 0) {
+                console.warn(`[Stalker] ${expectedKey} field is empty object, returning []`);
+                return [];
+            }
+            // Treat as single item
+            console.warn(`[Stalker] ${expectedKey} field is a dictionary, converting to single-item list`);
+            return [extracted] as T[];
+        }
+
+        // If it's an array, return it
+        if (Array.isArray(extracted)) {
+            return extracted as T[];
+        }
+
+        // Unknown format
+        console.error(`[Stalker] ${expectedKey} field is neither a list nor a dictionary:`, extracted);
+        return [];
+    }
+
+    /**
+     * Detect if the current portal uses stalker_portal paths
+     * (which require URL-encoded MAC and Europe/Paris timezone)
+     */
+    private isStalkerPortalEndpoint(): boolean {
+        return this.config.baseUrl.includes('/stalker_portal');
+    }
+
+    /**
+     * Resolve relative screenshot/poster URL to absolute URL
+     * Stalker returns relative paths like "/stalker_portal/screenshots/..."
+     */
+    private resolvePosterUrl(screenshotUri: string | boolean | undefined): string {
+        if (!screenshotUri || typeof screenshotUri !== 'string') {
+            return '';
+        }
+
+        // Already absolute URL
+        if (screenshotUri.match(/^https?:\/\//i)) {
+            return screenshotUri;
+        }
+
+        // Relative path - prepend base URL origin
+        if (screenshotUri.startsWith('/')) {
+            const baseUrl = new URL(this.config.baseUrl);
+            return `${baseUrl.origin}${screenshotUri}`;
+        }
+
+        return screenshotUri;
+    }
+
+    private generateMetrics(): string {
+        return JSON.stringify({
+            mac: this.config.mac,
+            sn: this.serial,
+            type: "STB",
+            model: "MAG250",
+            uid: "",
+            random: this.random
+        });
+    }
+
+    private getHeaders(includeAuth: boolean = false, includeToken: boolean = true): Record<string, string> {
+        const headers: Record<string, string> = {
+            'Accept': '*/*',
+            'User-Agent': 'Mozilla/5.0 (QtEmbedded; U; Linux; C) AppleWebKit/533.3 (KHTML, like Gecko) MAG200 stbapp ver: 2 rev: 250 Safari/533.3',
+            'Referer': `${this.config.baseUrl}/stalker_portal/c/index.html`,
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Pragma': 'no-cache',
+            'X-User-Agent': 'Model: MAG250; Link: WiFi',
+            // Host is handled by fetch environment
+            'Connection': 'keep-alive'  // Match working player
+        };
+
+        if (includeAuth && this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+
+        // CRITICAL FIX: For stalker_portal endpoints, ALWAYS URL-encode the MAC in cookies
+        // The working player shows: Cookie: mac=00%3A1A%3A79%3A00%3A0C%3A01
+        const macValue = this.isStalkerPortalEndpoint()
+            ? encodeURIComponent(this.config.mac)
+            : this.config.mac;
+
+        // Timezone: Use user's actual local timezone instead of hardcoded European timezones
+        // This ensures the Stalker server returns EPG data in the correct timezone
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const cookies = [
+            `mac=${macValue}`,
+            'stb_lang=en',
+            `timezone=${timezone}`
+        ];
+
+        // CRITICAL: Token in cookie behavior (from packet capture analysis):
+        // - portal.php: ALWAYS include token in cookie (when available)
+        // - stalker_portal: Include token in cookie for ALL requests EXCEPT getProfile
+        //   (getProfile uses only Authorization header, but get_genres, etc. need token in cookie too)
+        if (includeToken && this.token) {
+            cookies.push(`token=${this.token}`);
+        }
+
+        headers['Cookie'] = cookies.join('; ');
+
+        return headers;
+    }
+
+    /**
+    /**
+     * Clear cached token globally for a given source or all sources
+     */
+    static clearTokenCache(sourceId?: string): void {
+        if (sourceId) {
+            StalkerClient.globalTokens.delete(sourceId);
+            StalkerClient.globalRefreshPromises.delete(sourceId);
+        } else {
+            StalkerClient.globalTokens.clear();
+            StalkerClient.globalRefreshPromises.clear();
+        }
+    }
+
+    /**
+     * Ensure we have a valid token (renew if expired or force requested)
+     * Uses static promise-based locking to prevent concurrent token refresh operations across instances
+     */
+    async ensureToken(force: boolean = false): Promise<void> {
+        const sourceId = this.sourceId;
+
+        if (force) {
+            StalkerClient.clearTokenCache(sourceId);
+            this.token = null;
+            this.tokenTimestamp = 0;
+        }
+
+        // 1. If a refresh is already in progress for this source, wait for it to complete
+        const activePromise = StalkerClient.globalRefreshPromises.get(sourceId);
+        if (activePromise) {
+            console.log(`[Stalker] Token refresh already in progress for source ${sourceId}, waiting...`);
+            await activePromise;
+            // Sync current instance's local fields
+            const shared = StalkerClient.globalTokens.get(sourceId);
+            if (shared) {
+                this.token = shared.token;
+                this.tokenTimestamp = shared.timestamp;
+            }
+            console.log('[Stalker] Token refresh completed by another instance');
+            return;
+        }
+
+        // 2. Sync local instance fields with global shared cache if available (unless forcing)
+        if (!force) {
+            const shared = StalkerClient.globalTokens.get(sourceId);
+            if (shared) {
+                this.token = shared.token;
+                this.tokenTimestamp = shared.timestamp;
+            }
+        }
+
+        const currentTimestamp = Date.now() / 1000;
+
+        if (force || !this.token || (currentTimestamp - this.tokenTimestamp) > STALKER_TOKEN_VALIDITY_SECONDS) {
+            console.log(`[Stalker] Token expired, missing, or force refreshed for source ${sourceId}. Starting refresh...`);
+
+            // Create and store the refresh promise to block concurrent calls globally for this source
+            const refreshPromise = (async () => {
+                try {
+                    await this.handshake();
+                    await this.getProfile();
+                    
+                    // Store the newly obtained token in the global map
+                    if (this.token) {
+                        StalkerClient.globalTokens.set(sourceId, {
+                            token: this.token,
+                            timestamp: this.tokenTimestamp
+                        });
+                    }
+                    console.log(`[Stalker] Token refresh completed successfully for source ${sourceId}`);
+                } catch (error) {
+                    console.error(`[Stalker] Token refresh failed for source ${sourceId}:`, error);
+                    throw error;
+                } finally {
+                    // Always clear the lock when done
+                    StalkerClient.globalRefreshPromises.delete(sourceId);
+                }
+            })();
+
+            StalkerClient.globalRefreshPromises.set(sourceId, refreshPromise);
+            await refreshPromise;
+        }
+    }
+
+    /**
+     * Process Stalker API response - extracts data from js/data wrapper
+     */
+    private processResponse<T>(raw: any, action: string): T {
+        // Debug logging for key actions
+        if (['get_genres', 'get_all_channels', 'get_categories', 'get_epg_info'].includes(action)) {
+            console.log(`[Stalker] Full response for ${action}:`, JSON.stringify(raw));
+
+            // Warn if we detect empty objects
+            if (raw.js && typeof raw.js === 'object' && !Array.isArray(raw.js) && Object.keys(raw.js).length === 0) {
+                console.warn(`[Stalker] ⚠️ ${action} returned EMPTY OBJECT: {"js":{}}`);
+            }
+            if (raw.data && typeof raw.data === 'object' && !Array.isArray(raw.data) && Object.keys(raw.data).length === 0) {
+                console.warn(`[Stalker] ⚠️ ${action} returned EMPTY OBJECT: {"data":{}}`);
+            }
+        }
+
+        // Stalker API typically returns { js: ... }
+        if (raw && raw.js) {
+            return raw.js as T;
+        }
+        // Some versions return { data: ... }
+        if (raw && raw.data) {
+            return raw.data as T;
+        }
+        return raw as T;
+    }
+
+    /**
+     * Fetch from Stalker API with retry logic and fallback URL support
+     */
+    private async fetchStalker<T>(
+        action: string,
+        type: string = 'itv',
+        extraParams: Record<string, string> = {},
+        customHeaders: Record<string, string> | null = null,
+        isRetryAfterAuthRefresh: boolean = false
+    ): Promise<T> {
+        const params = new URLSearchParams({
+            type,
+            action,
+            JsHttpRequest: '1-xml',
+            ...extraParams,
+        });
+
+        // Try current config.baseUrl first, then all remaining fallback URLs
+        const candidateBaseUrls = [
+            this.config.baseUrl,
+            ...this.fallbackUrls.filter(u => u !== this.config.baseUrl)
+        ];
+
+        let lastError: any;
+
+        for (const baseUrl of candidateBaseUrls) {
+            const url = `${baseUrl}?${params.toString()}`;
+            const headers = customHeaders || this.getHeaders(true, true);
+
+            console.log(`[Stalker] Request: ${action}, URL: ${url}`);
+
+            for (let attempt = 1; attempt <= STALKER_MAX_RETRIES; attempt++) {
+                try {
+                    const response = await universalFetch(url, {
+                        headers,
+                        timeout: STALKER_TIMEOUT_MS,
+                    });
+
+                    if (!response.ok) {
+                        if (response.status === 401 || response.status === 403) {
+                            console.warn(`[Stalker] Auth/Token error (${response.status}). Clearing cached token for source ${this.sourceId}.`);
+                            StalkerClient.clearTokenCache(this.sourceId);
+                            this.token = null;
+                            this.tokenTimestamp = 0;
+
+                            if (!isRetryAfterAuthRefresh && action !== 'handshake' && action !== 'get_profile') {
+                                console.log(`[Stalker] Retrying request ${action} with fresh token handshake...`);
+                                await this.ensureToken(true);
+                                return await this.fetchStalker<T>(action, type, extraParams, customHeaders, true);
+                            }
+                        }
+                        if (response.status === 404) {
+                            console.warn(`[Stalker] 404 Not Found from ${baseUrl}`);
+                            break; // Try next fallback URL
+                        }
+                        throw new Error(`Stalker API error: ${response.status} ${response.statusText}`);
+                    }
+
+                    // Handle empty response — try next fallback URL if available
+                    if (!response.text || response.text.trim() === '') {
+                        console.warn(`[Stalker] Empty response body received from ${baseUrl} for ${action}`);
+                        break; // Try next fallback URL
+                    }
+
+                    // Parse JSON
+                    let parsed: any;
+                    try {
+                        parsed = JSON.parse(response.text);
+                    } catch (e) {
+                        console.warn(`[Stalker] Invalid JSON from ${baseUrl} for ${action}.`);
+
+                        // Stalker servers often return HTTP 200 OK with HTML error page ("Authorization failed") when session expires on server.
+                        // If we used a cached token, force a token refresh and retry once.
+                        if (this.token && !isRetryAfterAuthRefresh && action !== 'handshake' && action !== 'get_profile') {
+                            console.warn(`[Stalker] Cached token for source ${this.sourceId} returned invalid JSON/HTML from server (likely expired session). Refreshing token...`);
+                            try {
+                                await this.ensureToken(true);
+                                return await this.fetchStalker<T>(action, type, extraParams, customHeaders, true);
+                            } catch (refreshErr) {
+                                console.error(`[Stalker] Automatic token refresh retry failed for ${action}:`, refreshErr);
+                            }
+                        }
+                        break; // Try next fallback URL
+                    }
+
+                    // Successfully received valid response from fallback URL — remember it as primary
+                    if (baseUrl !== this.config.baseUrl) {
+                        console.log(`[Stalker] Switched working baseUrl to: ${baseUrl}`);
+                        this.config.baseUrl = baseUrl;
+                    }
+
+                    return this.processResponse<T>(parsed, action);
+
+                } catch (error: any) {
+                    lastError = error;
+                    if (attempt < STALKER_MAX_RETRIES) {
+                        await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+                    }
+                }
+            }
+        }
+
+        throw lastError || new Error(`Stalker request failed for ${action}`);
+    }
+
+
+    async handshake(): Promise<void> {
+        console.log('[Stalker] Starting handshake...');
+        const maxAttempts = 3;
+
+        for (let attempt = 1; attempt <= STALKER_MAX_HANDSHAKE_ATTEMPTS; attempt++) {
+            try {
+                this.random = this.generateRandomValue();
+
+                // Note: fetchStalker's processResponse extracts the 'js' key, so response will be {token: "..."}
+                // Working player doesn't send Authorization header in handshake, uses cookies instead
+                const response = await this.fetchStalker<{ token: string }>(
+                    'handshake',
+                    'stb'
+                    // No custom headers - let getHeaders handle it via cookies
+                );
+
+                // fetchStalker already extracted 'js' key, so check response.token directly
+                if (response && response.token) {
+                    this.token = response.token;
+                    this.tokenTimestamp = Date.now() / 1000;
+                    console.log(`[Stalker] Handshake successful (Attempt ${attempt}). Token: ${this.token}`);
+                    return;
+                } else {
+                    console.warn(`[Stalker] Handshake attempt ${attempt} returned unexpected format:`, response);
+                }
+            } catch (error: any) {
+                // Check if it's a 404 error and we have fallback URLs to try
+                if (error.message?.includes('404') && this.tryNextFallbackUrl()) {
+                    console.log(`[Stalker] 404 error, trying fallback URL...`);
+                    // Reset attempt counter to give full retries for new URL
+                    attempt = 0;
+                    continue;
+                }
+
+                console.error(`[Stalker] Handshake attempt ${attempt} failed:`, error.message || error);
+
+                if (attempt < STALKER_MAX_HANDSHAKE_ATTEMPTS) {
+                    await new Promise(resolve => setTimeout(resolve, STALKER_HANDSHAKE_RETRY_DELAY_MS * attempt));
+                } else {
+                    throw new Error(error.message || 'Handshake failed');
+                }
+            }
+        }
+
+        throw new Error('Handshake failed after all attempts');
+    }
+
+    async getProfile(): Promise<void> {
+        console.log('[Stalker] Getting profile to activate session...');
+        if (!this.token) throw new Error('Cannot get profile without token');
+
+        // VERIFIED FROM PACKET CAPTURE:
+        // stalker_portal endpoints REQUIRE full device parameters
+        // The working player sends ALL these params to /stalker_portal/server/load.php
+        const params: Record<string, string> = this.isStalkerPortalEndpoint() ? {
+            hd: '1',
+            ver: 'ImageDescription: 0.2.18-r23-250; ImageDate: Thu Sep 13 11:31:16 EEST 2018; PORTAL version: 5.6.2; API Version: JS API version: 343; STB API version: 146; Player Engine version: 0x58c',
+            num_banks: '2',
+            sn: this.serial,
+            stb_type: 'MAG250',
+            client_type: 'STB',
+            image_version: '218',
+            video_out: 'hdmi',
+            device_id: this.deviceId,
+            device_id2: this.deviceId2,
+            signature: this.generateSignature(),
+            auth_second_step: '1',
+            hw_version: '1.7-BD-00',
+            not_valid_token: '0',
+            metrics: this.generateMetrics(),
+            hw_version_2: CryptoJS.SHA1(this.config.mac).toString(),
+            timestamp: Math.floor(Date.now() / 1000).toString(),
+            api_signature: '262',
+            prehash: '',
+        } : {};
+
+        // CRITICAL: For stalker_portal, getProfile is the ONLY request that should NOT have token in cookie
+        // All other stalker_portal requests need token in BOTH Authorization header AND cookie
+        // - portal.php: ALWAYS includes token in cookie
+        // - stalker_portal: Token in cookie for everything EXCEPT getProfile
+        const includeTokenInCookie = !this.isStalkerPortalEndpoint(); // false for stalker_portal
+        const headers = this.getHeaders(true, includeTokenInCookie);
+
+        try {
+            const data = await this.fetchStalker<{ token: string }>('get_profile', 'stb', params, headers);
+
+            if (data && data.token) {
+                this.token = data.token;
+                this.tokenTimestamp = Date.now() / 1000;
+                console.log('[Stalker] Profile activated. Token refreshed:', this.token);
+            } else {
+                console.log('[Stalker] Profile activated. Token unchanged.');
+            }
+        } catch (e) {
+            console.error('[Stalker] getProfile failed:', e);
+            // Some portals might fail get_profile but allow streaming? 
+            // Better to throw if it's critical for session activation.
+            // But let's log and proceed if token exists.
+        }
+    }
+
+
+    async getLiveCategories(): Promise<Category[]> {
+        await this.ensureToken();
+        // include_censored=1 (and censored=1 fallback) ensures adult genres are returned by the server
+        const rawData = await this.fetchStalker<any>('get_genres', 'itv', {
+            include_censored: '1',
+            censored: '1'
+        });
+        const genres = this.safeJsonList<StalkerGenre>(rawData);
+
+        console.log(`[Stalker] Fetched ${genres.length} live categories`);
+
+        return genres.map((genre, index) => ({
+            category_id: `${this.sourceId}_${genre.id}`,
+            category_name: genre.title,
+            source_id: this.sourceId,
+            display_order: index,
+        }));
+    }
+
+    async getLiveStreams(): Promise<Channel[]> {
+        await this.ensureToken();
+        console.log('[Stalker] getLiveStreams: Using get_all_channels for instant loading...');
+
+        try {
+            // Use get_all_channels to fetch ALL channels in ONE request
+            // include_censored=1 ensures adult/locked channels are returned by the server
+            const rawData = await this.fetchStalker<any>('get_all_channels', 'itv', {
+                include_censored: '1',
+                censored: '1'
+            });
+
+            // Use safeJsonList to handle both {js: []} and {js: {}} responses
+            // For get_all_channels, data is often in 'data' key instead of 'js'
+            const channelsData = this.safeJsonList<any>(rawData, 'data');
+
+            console.log(`[Stalker] Received ${channelsData.length} channels from get_all_channels`);
+
+            // Also fetch genres for category mapping
+            const rawGenres = await this.fetchStalker<any>('get_genres', 'itv');
+            const genres = this.safeJsonList<StalkerGenre>(rawGenres);
+            const genreMap = new Map<string, string>();
+            const censoredGenreIds: string[] = [];
+            
+            if (Array.isArray(genres)) {
+                for (const genre of genres) {
+                    genreMap.set(genre.id, `${this.sourceId}_${genre.id}`);
+                    
+                    // Identify adult genres (using flags or keyword matching)
+                    const titleStr = (genre.title || '').toLowerCase();
+                    const aliasStr = (genre.alias || '').toLowerCase();
+                    const hasAdultKeyword = /(adult|xxx|18\+|\+18|\b18\b|18 rated|sex|porn|voksen|volwassen|aikuinen|erwachsene|dorosly|взрослый|vuxen|дорослий|£дорослий)/i.test(titleStr) || 
+                                            /(adult|xxx|18\+|\+18|\b18\b|18 rated|sex|porn|voksen|volwassen|aikuinen|erwachsene|dorosly|взрослый|vuxen|дорослий|£дорослий)/i.test(aliasStr);
+                    
+                    if (this.isCensored(genre.censored, 0) || hasAdultKeyword) {
+                        censoredGenreIds.push(genre.id);
+                    }
+                }
+            }
+
+            // CRITICAL: Stalker portals often hide adult channels from get_all_channels even with include_censored=1
+            // We must explicitly fetch channels for each adult genre to bypass common-list hiding
+            // We must ALSO paginate through them, as get_ordered_list often defaults to returning only 14 items (p=1)
+            if (censoredGenreIds.length > 0) {
+                console.log(`[Stalker] Fetching explicitly for ${censoredGenreIds.length} adult categories to bypass common-list hiding`);
+                
+                for (const genreId of censoredGenreIds) {
+                    let page = 1;
+                    let hasMore = true;
+                    
+                    while (hasMore) {
+                        try {
+                            const resp = await this.fetchStalker<any>('get_ordered_list', 'itv', {
+                                genre: genreId,
+                                force_ch_link_check: '0',
+                                include_censored: '1',
+                                censored: '1',
+                                p: page.toString()
+                            });
+                            
+                            const adultChannels = this.safeJsonList<any>(resp, 'data');
+                            if (adultChannels && adultChannels.length > 0) {
+                                // Force adult flag for these channels just in case the server marked them 0
+                                for (const ac of adultChannels) {
+                                    ac._forced_adult = true;
+                                }
+                                channelsData.push(...adultChannels);
+                                page++;
+                                
+                                // Standard stalker page size is 14. If we get less, there are no more pages.
+                                if (adultChannels.length < 14) {
+                                    hasMore = false;
+                                }
+                            } else {
+                                hasMore = false;
+                            }
+                        } catch (e) {
+                            console.warn(`[Stalker] Failed to fetch adult category ${genreId} page ${page}:`, e);
+                            hasMore = false;
+                        }
+                    }
+                }
+                console.log(`[Stalker] Total channels after adding adult categories: ${channelsData.length}`);
+            }
+
+            // Process all channels
+            const allChannels: Channel[] = [];
+            const seenChannelIds = new Set<string>();
+            let providerOrder = 0;
+
+            for (const ch of channelsData) {
+                if (seenChannelIds.has(ch.id)) continue;
+                seenChannelIds.add(ch.id);
+
+                // Extract raw command
+                const rawCmd = ch.cmd || ch.url || '';
+
+                // Determine if we need to resolve this URL via create_link (Stalker token) or play directly
+                // Logic based on STALKER PLAYER.py: if "/ch/" in cmd and cmd.endswith("_") -> needs create_link
+                // We'll be slightly broader: if it contains /ch/ it's likely a token.
+                // Dino source uses /play/live.php... which is direct and fails if passed to create_link.
+
+                let url: string;
+                if (rawCmd.includes('/ch/')) {
+                    url = `stalker_ch:${rawCmd}`;
+                } else {
+                    url = this.sanitizeStreamUrl(rawCmd);
+                }
+
+                // Map categories
+                const catIds = new Set<string>();
+                if (ch.tv_genre_id && genreMap.has(ch.tv_genre_id)) {
+                    catIds.add(genreMap.get(ch.tv_genre_id)!);
+                }
+                if (ch.genre_id && genreMap.has(ch.genre_id)) {
+                    catIds.add(genreMap.get(ch.genre_id)!);
+                }
+
+                // Only enable catch-up (tv_archive) indicator for MAC portals that use direct stream URLs (e.g. /play/live.php)
+                // Standard Stalker/Ministra STB portals (ffrt http://localhost/ch/...) use unsupported/broken TvArchive.php middleware
+                const isMacDirectUrl = rawCmd.includes('/play/') || (rawCmd.startsWith('http') && !rawCmd.includes('/ch/'));
+                const rawHasArchive = ch.tv_archive === 1 || ch.tv_archive === '1' || ch.tv_archive === true
+                    || (ch.tv_archive_duration != null && Number(ch.tv_archive_duration) > 0);
+                const hasArchive = isMacDirectUrl && rawHasArchive;
+                const archiveDurationHours = hasArchive && ch.tv_archive_duration != null
+                    ? Number(ch.tv_archive_duration) || 0
+                    : undefined;
+
+                const channel: Channel = {
+                    stream_id: `${this.sourceId}_${ch.id}`,
+                    channel_num: parseInt(ch.number || '0'),
+                    name: ch.name,
+                    stream_icon: ch.logo || '',
+
+                    category_ids: catIds.size > 0 ? Array.from(catIds) : [],
+                    direct_url: url,
+                    source_id: this.sourceId,
+                    epg_channel_id: ch.xmltv_id,
+                    provider_order: providerOrder,
+                    is_adult: this.isCensored(ch.censored, ch.lock) || ch._forced_adult === true,
+                    tv_archive: hasArchive,
+                    tv_archive_duration: archiveDurationHours,
+                };
+                providerOrder++;
+
+                allChannels.push(channel);
+            }
+
+            console.log(`[Stalker] Processed ${allChannels.length} live channels`);
+            return allChannels;
+        } catch (error) {
+            console.error('[Stalker] Error in getLiveStreams:', error);
+            return [];
+        }
+    }
+
+    async getVodCategories(): Promise<Category[]> {
+        await this.ensureToken();
+        const rawData = await this.fetchStalker<any>('get_categories', 'vod', { sortby: 'number' });
+        const categories = this.safeJsonList<StalkerGenre>(rawData);
+
+        console.log(`[Stalker] Fetched ${categories.length} raw VOD categories`);
+
+        // Exclude categories that are series-related so they don't appear in the Movies tab
+        const excludeKeywords = ['tv', 'series', 'serie', 'show', 'shows', 'season', 'seasons', 'drama', 'dramas', 'k-drama', 'k-dramas', 'anime', 'cartoon', 'cartoons'];
+
+        const filteredData = categories.filter(cat => {
+            const name = (cat.title || '').toLowerCase();
+            return !excludeKeywords.some(keyword => name.includes(keyword));
+        });
+
+        console.log(`[Stalker] Filtered to ${filteredData.length} VOD categories`);
+
+        return filteredData.map((cat, index) => ({
+            category_id: `${this.sourceId}_vod_${cat.id}`,
+            category_name: cat.title,
+            parent_id: 0,
+            source_id: this.sourceId,
+            display_order: index,
+        }));
+    }
+
+    async getVodStreams(categoryId?: string, onProgress?: StalkerPageProgress): Promise<Channel[]> {
+        await this.ensureToken();
+        console.log('[Stalker] getVodStreams: fetching with parallel pagination...');
+
+        const catId = categoryId ? categoryId.replace(`${this.sourceId}_vod_`, '').replace(`${this.sourceId}_`, '') : '*';
+
+        // Fetch pages in parallel batches of 4 for faster loading
+        // Note: Stalker uses 0-indexed pages (p=0 is first page)
+        const allItems: any[] = [];
+        let page = 0;
+        let hasMore = true;
+        let pagesFetched = 0; // 1-indexed count of pages actually retrieved (for the "Page X of Y" display)
+        let totalPages: number | undefined;
+        const BATCH_SIZE = 4;
+
+        while (hasMore) {
+            // Fetch BATCH_SIZE pages in parallel
+            const batchPromises = [];
+            for (let i = 0; i < BATCH_SIZE; i++) {
+                batchPromises.push(
+                    this.fetchStalker<any>('get_ordered_list', 'vod', {
+                        category: catId,
+                        sortby: 'number',
+                        p: (page + i).toString(),
+                        include_censored: '1',
+                        censored: '1'
+                    })
+                );
+            }
+
+            const responses = await Promise.all(batchPromises);
+            let itemsInBatch = 0;
+
+            for (let i = 0; i < responses.length; i++) {
+                const response = responses[i];
+                const { items: vodItems, total_items, max_page_items, pages } = this.extractOrderedList(response);
+                const pageSize = max_page_items || 14;
+
+                if (!totalPages && pages) totalPages = pages;
+                if (!totalPages && total_items != null) {
+                    totalPages = Math.max(1, Math.ceil(total_items / pageSize));
+                }
+
+                if (vodItems.length > 0) {
+                    allItems.push(...vodItems);
+                    itemsInBatch += vodItems.length;
+                    pagesFetched++;
+
+                    // If any page has less than a full page of items, we've reached the end
+                    if (vodItems.length < pageSize) {
+                        hasMore = false;
+                        break;
+                    }
+                } else {
+                    // Empty response means no more pages
+                    hasMore = false;
+                    break;
+                }
+            }
+
+            // If we got no items in this batch, stop
+            if (itemsInBatch === 0) {
+                hasMore = false;
+            } else {
+                page += BATCH_SIZE;
+            }
+
+            // Report progress so the UI can show "Page X of Y" while lazy-loading
+            if (onProgress) {
+                const percent = totalPages ? Math.min(100, Math.round((pagesFetched / totalPages) * 100)) : 0;
+                onProgress(percent, pagesFetched, totalPages);
+            }
+        }
+
+        console.log(`[Stalker] Fetched ${allItems.length} total VOD items from ${pagesFetched} page(s)`);
+
+        // Filter for movies only (is_series!="1")
+        const filteredMovies = allItems.filter((item: any) => {
+            const isSeries = item.is_series;
+            return isSeries !== "1" && isSeries !== 1 && isSeries !== true;
+        });
+
+        console.log(`[Stalker] Filtered to ${filteredMovies.length} movies (excluding series)`);
+
+        return filteredMovies.map(item => ({
+            stream_id: `${this.sourceId}_vod_${item.id}`,
+            name: item.name,
+            title: item.name,
+            stream_icon: this.resolvePosterUrl(item.screenshot_uri),
+            rating: item.rating_kinopoisk || item.rating_imdb || '',
+
+            // Metadata from provider
+            plot: item.description || '',
+            genre: item.genre || '',
+            cast: item.actors || '',
+            director: item.director || '',
+            year: item.year || '',
+            release_date: item.year ? `${item.year}-01-01` : '',
+
+            category_ids: categoryId ? [categoryId] : [],
+            added: item.added || item.time_added || item.added_time || '',
+            container_extension: item.container_extension || 'mp4',
+            direct_url: `stalker_vod:${item.id}:${item.cmd || ''}`,
+            source_id: this.sourceId,
+            epg_channel_id: '',
+        }));
+    }
+
+    async getSeriesCategories(): Promise<Category[]> {
+        await this.ensureToken();
+        let categories: StalkerGenre[] = [];
+        let isFallback = false;
+
+        // Try type='series' first for series categories
+        try {
+            const rawData = await this.fetchStalker<any>('get_categories', 'series', { sortby: 'number' });
+            categories = this.safeJsonList<StalkerGenre>(rawData);
+            console.log(`[Stalker] Fetched ${categories.length} raw series categories`);
+        } catch (err) {
+            console.warn('[Stalker] Failed to fetch series categories (type=series), will try falling back to VOD categories:', err);
+        }
+
+        // If no series categories returned, fall back to VOD categories
+        // Many portals share categories between movies and series
+        if (categories.length === 0) {
+            console.log('[Stalker] No series categories found or fetch failed, falling back to VOD categories');
+            try {
+                isFallback = true;
+                const rawData = await this.fetchStalker<any>('get_categories', 'vod', { sortby: 'number' });
+                categories = this.safeJsonList<StalkerGenre>(rawData);
+                console.log(`[Stalker] Fetched ${categories.length} VOD categories as fallback for series`);
+            } catch (err) {
+                console.error('[Stalker] Failed to fetch VOD categories as fallback for series:', err);
+            }
+        }
+
+        let filteredCategories = categories;
+        if (isFallback) {
+            // Only keep series-related categories or general categories, filter out explicitly movie-related categories
+            const seriesKeywords = ['series', 'serie', 'show', 'shows', 'tv', 'season', 'seasons', 'drama', 'dramas', 'k-drama', 'k-dramas', 'anime', 'cartoon', 'cartoons'];
+            const movieKeywords = ['movie', 'movies', 'film', 'films', 'cinema', 'cinemas', 'short movie', 'short movies', 'pre-dvd', 'predvd', 'latest', 'collection', '4k'];
+            
+            filteredCategories = categories.filter(cat => {
+                const title = (cat.title || '').toLowerCase();
+                const alias = (cat.alias || '').toLowerCase();
+                
+                if (seriesKeywords.some(kw => title.includes(kw) || alias.includes(kw))) {
+                    return true;
+                }
+                if (movieKeywords.some(kw => title.includes(kw) || alias.includes(kw))) {
+                    return false;
+                }
+                return true;
+            });
+            console.log(`[Stalker] Filtered fallback VOD categories to ${filteredCategories.length} series categories`);
+        }
+
+        return filteredCategories.map((cat, index) => ({
+            category_id: `${this.sourceId}_series_${cat.id}`,
+            category_name: cat.title,
+            parent_id: 0,
+            source_id: this.sourceId,
+            epg_channel_id: '',
+            is_category: true,
+            category_type: 'series',
+            display_order: index,
+        }));
+    }
+
+    async getSeriesStreams(categoryId?: string, onProgress?: StalkerPageProgress): Promise<Channel[]> {
+        await this.ensureToken();
+        console.log('[Stalker] getSeriesStreams: fetching with parallel pagination...');
+
+        const catId = categoryId ? categoryId.replace(`${this.sourceId}_series_`, '').replace(`${this.sourceId}_`, '') : '*';
+
+        // Helper: fetch all pages from a given endpoint+type+category combo
+        const fetchAllPages = async (type: 'series' | 'vod', cat: string): Promise<any[]> => {
+            const items: any[] = [];
+            let page = 0;
+            let hasMore = true;
+            let pagesFetched = 0; // 1-indexed count of pages retrieved so far
+            let totalPages: number | undefined;
+            const BATCH_SIZE = 4;
+
+            while (hasMore) {
+                const batchPromises = [];
+                for (let i = 0; i < BATCH_SIZE; i++) {
+                    const extraParams: Record<string, string> = {
+                        category: cat,
+                        sortby: 'number',
+                        p: (page + i).toString(),
+                        include_censored: '1',
+                        censored: '1'
+                    };
+
+                    if (type === 'series') {
+                        extraParams.movie_id = '0';
+                        extraParams.season_id = '0';
+                        extraParams.episode_id = '0';
+                    }
+
+                    batchPromises.push(
+                        this.fetchStalker<any>('get_ordered_list', type, extraParams)
+                    );
+                }
+
+                const responses = await Promise.all(batchPromises);
+                let itemsInBatch = 0;
+
+                for (let i = 0; i < responses.length; i++) {
+                    const response = responses[i];
+                    const { items: pageItems, total_items, max_page_items, pages } = this.extractOrderedList(response);
+                    const pageSize = max_page_items || 14;
+
+                    if (!totalPages && pages) totalPages = pages;
+                    if (!totalPages && total_items != null) {
+                        totalPages = Math.max(1, Math.ceil(total_items / pageSize));
+                    }
+
+                    if (pageItems.length > 0) {
+                        items.push(...pageItems);
+                        itemsInBatch += pageItems.length;
+                        pagesFetched++;
+
+                        if (pageItems.length < pageSize) {
+                            hasMore = false;
+                            break;
+                        }
+                    } else {
+                        hasMore = false;
+                        break;
+                    }
+                }
+
+                if (itemsInBatch === 0) {
+                    hasMore = false;
+                } else {
+                    page += BATCH_SIZE;
+                }
+
+                // Report progress so the UI can show "Page X of Y" while lazy-loading
+                if (onProgress) {
+                    const percent = totalPages ? Math.min(100, Math.round((pagesFetched / totalPages) * 100)) : 0;
+                    onProgress(percent, pagesFetched, totalPages);
+                }
+            }
+
+            return items;
+        };
+
+        // --- Attempt 1: type=series, specific category ---
+        let activeType: 'series' | 'vod' = 'series';
+        let allItems = await fetchAllPages('series', catId);
+        console.log(`[Stalker] Fetched ${allItems.length} total series items via type=series, category=${catId}`);
+
+        // --- Attempt 2: type=vod, specific category (is_series=1 portals) ---
+        if (allItems.length === 0 && catId !== '*') {
+            console.log('[Stalker] getSeriesStreams: No results via type=series, falling back to type=vod...');
+            allItems = await fetchAllPages('vod', catId);
+            console.log(`[Stalker] Fetched ${allItems.length} items via type=vod, category=${catId}`);
+            if (allItems.length > 0) {
+                activeType = 'vod';
+            }
+        }
+
+        // --- Attempt 3: type=series, category=* then filter client-side ---
+        // Some portals have valid series categories but don't support per-category filtering;
+        // get_ordered_list ignores the category param and only works with '*'.
+        if (allItems.length === 0 && catId !== '*') {
+            console.log('[Stalker] getSeriesStreams: No results for specific category. Trying category=* with type=series and filtering client-side...');
+            const allSeries = await fetchAllPages('series', '*');
+            console.log(`[Stalker] Fetched ${allSeries.length} items via type=series, category=*`);
+            if (allSeries.length > 0) {
+                // Filter by matching the raw category ID on each item's category/genre_id field
+                const filtered = allSeries.filter((item: any) => {
+                    const itemCat = String(item.category_id ?? item.genre_id ?? item.cat_id ?? '');
+                    return itemCat === catId;
+                });
+                console.log(`[Stalker] Client-side filtered to ${filtered.length} items for category ${catId} from ${allSeries.length} total`);
+                // If filtering by catId yields nothing but we know this category exists,
+                // return the unfiltered set so all series are visible in any category
+                allItems = filtered.length > 0 ? filtered : allSeries;
+                if (allItems.length > 0) {
+                    activeType = 'series';
+                }
+            }
+        }
+
+        // --- Attempt 4: type=vod, category=* then filter client-side (is_series=1 portals) ---
+        // Runs for ANY category (including '*' = All): portals that serve series
+        // under the VOD endpoint with is_series=1 return nothing for type=series,
+        // so the All view previously came back empty even though every specific
+        // category loaded fine. The client-side category filter below only applies
+        // to non-'*' categories; for '*' the is_series filter at the end decides.
+        if (allItems.length === 0) {
+            console.log('[Stalker] getSeriesStreams: Trying category=* with type=vod and filtering client-side...');
+            const allVod = await fetchAllPages('vod', '*');
+            console.log(`[Stalker] Fetched ${allVod.length} items via type=vod, category=*`);
+            if (allVod.length > 0) {
+                let selected = allVod;
+                if (catId !== '*') {
+                    const filtered = allVod.filter((item: any) => {
+                        const itemCat = String(item.category_id ?? item.genre_id ?? item.cat_id ?? '');
+                        return itemCat === catId;
+                    });
+                    console.log(`[Stalker] Client-side filtered to ${filtered.length} items for category ${catId} from ${allVod.length} total VOD`);
+                    selected = filtered.length > 0 ? filtered : allVod;
+                }
+                allItems = selected;
+                if (allItems.length > 0) {
+                    activeType = 'vod';
+                }
+            }
+        }
+
+        console.log(`[Stalker] Fetched ${allItems.length} total items (before series filter, activeType=${activeType})`);
+
+        // Filter for series: discard items explicitly marked as movies or not series (only applied if we fell back to VOD endpoints)
+        const filteredSeries = allItems.filter((item: any) => {
+            if (activeType === 'series') {
+                return true;
+            }
+            
+            // If we are looking for items in a specific category (not '*'),
+            // keep all items returned for that category (since it has already been filtered as a Series category)
+            if (catId !== '*') {
+                return true;
+            }
+            
+            // If we are querying globally (category='*'), only keep items that are explicitly series
+            const isSeries = item.is_series;
+            return isSeries === "1" || isSeries === 1 || isSeries === true;
+        });
+
+        const uniqueIds = new Set(filteredSeries.map(item => item.id));
+        console.log(`[Stalker] Returning ${filteredSeries.length} series items. Unique IDs count: ${uniqueIds.size}`);
+
+        return filteredSeries.map(item => ({
+            stream_id: `${this.sourceId}_series_${item.id}`, // Required for Channel type
+            series_id: `${this.sourceId}_series_${item.id}`, // PRIMARY KEY for vodSeries table
+            name: item.name,
+            stream_icon: this.resolvePosterUrl(item.screenshot_uri),
+            cover: this.resolvePosterUrl(item.screenshot_uri), // Required for series
+            rating: item.rating_kinopoisk || item.rating_imdb || '',
+
+            // Metadata from provider
+            plot: item.description || '',
+            genre: item.genre || '',
+            cast: item.actors || '',
+            director: item.director || '',
+            year: item.year || '',
+            releaseDate: item.year ? `${item.year}-01-01` : '',
+
+            category_ids: categoryId ? [categoryId] : [],
+            added: item.added || item.time_added || item.added_time || '',
+            // Store movie_id for series navigation
+            direct_url: `stalker_series:${item.id}:${item.cmd || `/media/${item.id}.mpg`}`,
+            source_id: this.sourceId,
+            epg_channel_id: '', // Required for Channel type
+        }));
+    }
+
+    async getSeasons(seriesId: string): Promise<Season[]> {
+        await this.ensureToken();
+
+        // Extract raw movie ID from seriesId
+        // seriesId can be either:
+        // 1. "{sourceId}_series_{rawId}" (from syncStalkerCategory)
+        // 2. "stalker_series:{rawId}" (from direct_url)
+        // 3. Raw ID already (from _stalker_raw_id)
+        // Note: Some portals use compound IDs like "15754:15754" where first part is the movie_id
+        let rawMovieId: string;
+
+        if (seriesId.startsWith('stalker_series:')) {
+            // Extract from direct_url format: "stalker_series:12345" or "stalker_series:12345:12345"
+            const idPart = seriesId.substring('stalker_series:'.length);
+            // Use first part if compound ID
+            rawMovieId = idPart.split(':')[0];
+        } else if (seriesId.includes('_series_')) {
+            // Extract from prefixed ID format: "{sourceId}_series_12345" or "{sourceId}_series_12345:12345"
+            const prefix = `${this.sourceId}_series_`;
+            const idPart = seriesId.replace(prefix, '').replace(`${this.sourceId}_`, '');
+            // Use first part if compound ID
+            rawMovieId = idPart.split(':')[0];
+        } else {
+            // Already a raw ID - use first part if compound ID
+            rawMovieId = seriesId.split(':')[0];
+        }
+
+        console.log(`[Stalker] getSeasons: fetching for series ${seriesId} (raw: ${rawMovieId})...`);
+
+        let response: any = null;
+        let typeUsed: 'series' | 'vod' = 'series';
+        try {
+            response = await this.fetchStalker<any>('get_ordered_list', 'series', {
+                movie_id: rawMovieId,
+                season_id: '0',
+                episode_id: '0',
+                p: '0',
+                include_censored: '1',
+                censored: '1'
+            });
+        } catch (err) {
+            console.warn('[Stalker] getSeasons: fetch with type=series failed, will try fallback to type=vod:', err);
+        }
+
+        let seasonsData = response?.data || response;
+        console.log('[Stalker] Raw response:', JSON.stringify(response).substring(0, 500));
+        
+        // Check if the response is falsy or indicates failure (js === false)
+        let isResponseEmpty = !seasonsData || 
+                                (seasonsData.js === false) || 
+                                (response && response.js === false);
+
+        if (isResponseEmpty) {
+            console.log('[Stalker] getSeasons: No seasons found via type=series, falling back to type=vod...');
+            try {
+                typeUsed = 'vod';
+                response = await this.fetchStalker<any>('get_ordered_list', 'vod', {
+                    movie_id: rawMovieId,
+                    season_id: '0',
+                    episode_id: '0',
+                    p: '0',
+                    include_censored: '1',
+                    censored: '1'
+                });
+                seasonsData = response?.data || response;
+                console.log('[Stalker] Raw fallback response:', JSON.stringify(response).substring(0, 500));
+            } catch (err) {
+                console.error('[Stalker] getSeasons: fallback to type=vod failed:', err);
+            }
+        }
+
+        if (seasonsData && seasonsData.js && seasonsData.js.data) {
+            seasonsData = seasonsData.js.data;
+        }
+
+        console.log('[Stalker] seasonsData type:', typeof seasonsData, 'isArray:', Array.isArray(seasonsData));
+        if (Array.isArray(seasonsData)) {
+            console.log('[Stalker] seasonsData length:', seasonsData.length);
+            if (seasonsData.length > 0) {
+                console.log('[Stalker] First item sample:', JSON.stringify(seasonsData[0]).substring(0, 300));
+                console.log('[Stalker] First item keys:', Object.keys(seasonsData[0]));
+            }
+        }
+
+        if (!Array.isArray(seasonsData)) {
+            console.warn('[Stalker] Seasons data is not an array, returning empty');
+            return [];
+        }
+
+        // Filter for seasons only
+        // 1. Standard Ministra: is_series=1 and series array of episode numbers
+        // 2. Custom/Fallback: is_season=true or season_number present
+        const seasons = seasonsData.filter((item: any) => 
+            (item.is_series === 1 && item.series && Array.isArray(item.series)) ||
+            (item.is_season === true || item.is_season === 'true' || item.season_number !== undefined)
+        );
+
+        console.log(`[Stalker] Total items: ${seasonsData.length}, Seasons found: ${seasons.length}`);
+
+        const seasonsList: Season[] = [];
+
+        for (const season of seasons) {
+            const seasonName = season.name || season.season_name || '';
+            const seasonNumMatch = seasonName.match(/Season\s*(\d+)/i);
+            const seasonNum = seasonNumMatch ? parseInt(seasonNumMatch[1]) : (parseInt(season.season_number) || 1);
+
+            let episodes: Episode[] = [];
+
+            if (season.series && Array.isArray(season.series)) {
+                // Scenario A: Episodes are embedded in the 'series' array of the season
+                const episodeNumbers: number[] = season.series;
+                episodes = episodeNumbers.map((epNum: number) => ({
+                    id: `${this.sourceId}_episode_${season.id}_${epNum}`,
+                    title: `Episode ${epNum}`,
+                    episode_num: epNum,
+                    season_num: seasonNum,
+                    direct_url: `stalker_episode:${JSON.stringify({
+                        movieId: rawMovieId,
+                        seasonId: season.id,
+                        episodeId: String(epNum),
+                        cmd: season.cmd || `/media/file_${season.id}.mpg`
+                    })}`,
+                    info: { season_name: seasonName }
+                }));
+            } else {
+                // Scenario B: Episodes need to be fetched from the server using the season ID (e.g. "22753")
+                console.log(`[Stalker] getSeasons: Fetching episodes from server for season ${season.id} (number ${seasonNum})...`);
+                try {
+                    const epResponse = await this.fetchStalker<any>('get_ordered_list', typeUsed, {
+                        movie_id: rawMovieId,
+                        season_id: season.id,
+                        episode_id: '0',
+                        p: '0',
+                        include_censored: '1',
+                        censored: '1'
+                    });
+                    
+                    let epData = epResponse?.data || epResponse;
+                    if (epData && epData.js && epData.js.data) {
+                        epData = epData.js.data;
+                    }
+                    
+                    if (Array.isArray(epData)) {
+                        console.log(`[Stalker] getSeasons: Fetched ${epData.length} episodes for season ${seasonNum}`);
+                        episodes = epData.map((ep: any, index: number) => {
+                            const epNum = parseInt(ep.series_number || ep.episode_num) || (index + 1);
+                            const epCmd = ep.cmd || `/media/file_${ep.id}.mpg`;
+                            return {
+                                id: `${this.sourceId}_episode_${ep.id}`,
+                                title: ep.name || `Episode ${epNum}`,
+                                episode_num: epNum,
+                                season_num: seasonNum,
+                                // Embed the episode ID and play command in direct_url so resolveStreamUrl can extract and play it directly
+                                direct_url: `stalker_episode:${JSON.stringify({
+                                    movieId: rawMovieId,
+                                    seasonId: season.id,
+                                    episodeId: ep.id,
+                                    cmd: epCmd
+                                })}`,
+                                info: { season_name: seasonName }
+                            };
+                        });
+                    } else {
+                        console.warn(`[Stalker] getSeasons: Episodes response for season ${seasonNum} is not an array`);
+                    }
+                } catch (err) {
+                    console.error(`[Stalker] getSeasons: Failed to fetch episodes for season ${seasonNum}:`, err);
+                }
+            }
+
+            seasonsList.push({
+                season_number: seasonNum,
+                episodes: episodes
+            });
+        }
+
+        return seasonsList;
+    }
+
+    async getEpisodes(seriesId: string, seasonId: string): Promise<Episode[]> {
+        await this.ensureToken();
+
+        // Extract raw movie ID from seriesId (same logic as getSeasons)
+        let rawMovieId: string;
+
+        if (seriesId.startsWith('stalker_series:')) {
+            // Extract from direct_url format: "stalker_series:12345" or "stalker_series:12345:12345"
+            const idPart = seriesId.substring('stalker_series:'.length);
+            rawMovieId = idPart.split(':')[0];
+        } else if (seriesId.includes('_series_')) {
+            // Extract from prefixed ID format: "{sourceId}_series_12345" or "{sourceId}_series_12345:12345"
+            const prefix = `${this.sourceId}_series_`;
+            const idPart = seriesId.replace(prefix, '').replace(`${this.sourceId}_`, '');
+            rawMovieId = idPart.split(':')[0];
+        } else {
+            // Already a raw ID - use first part if compound ID
+            rawMovieId = seriesId.split(':')[0];
+        }
+
+        console.log(`[Stalker] getEpisodes: fetching for series ${seriesId}, season ${seasonId} (raw: ${rawMovieId})...`);
+
+        let response: any = null;
+        try {
+            response = await this.fetchStalker<any>('get_ordered_list', 'series', {
+                movie_id: rawMovieId,
+                season_id: seasonId,
+                episode_id: '0',
+                p: '0',
+                include_censored: '1',
+                censored: '1'
+            });
+        } catch (err) {
+            console.warn('[Stalker] getEpisodes: fetch with type=series failed, will try fallback to type=vod:', err);
+        }
+
+        let episodesData = response?.data || response;
+        
+        // Check if the response is falsy or indicates failure (js === false)
+        const isResponseEmpty = !episodesData || 
+                                (episodesData.js === false) || 
+                                (response && response.js === false);
+
+        if (isResponseEmpty) {
+            console.log('[Stalker] getEpisodes: No episodes found via type=series, falling back to type=vod...');
+            try {
+                response = await this.fetchStalker<any>('get_ordered_list', 'vod', {
+                    movie_id: rawMovieId,
+                    season_id: seasonId,
+                    episode_id: '0',
+                    p: '0',
+                    include_censored: '1',
+                    censored: '1'
+                });
+                episodesData = response?.data || response;
+            } catch (err) {
+                console.error('[Stalker] getEpisodes: fallback to type=vod failed:', err);
+            }
+        }
+
+        if (episodesData && episodesData.js && episodesData.js.data) {
+            episodesData = episodesData.js.data;
+        }
+
+        if (!Array.isArray(episodesData)) {
+            console.warn('[Stalker] Episodes data is not an array');
+            return [];
+        }
+
+        // Use rawMovieId in direct_url so resolveStreamUrl gets the correct ID.
+        // IMPORTANT: Each episode has its own cmd which must be used when calling create_link.
+        // Using the season cmd + series number results in the wrong video playing because
+        // create_link returns results based on the cmd, not the episode number.
+        return episodesData.map((episode, index) => {
+            const epNum = parseInt(episode.series_number || episode.episode_num) || 0;
+            const epCmd = episode.cmd || `/media/file_${episode.id}.mpg`;
+            const directUrl = `stalker_episode:${JSON.stringify({
+                movieId: rawMovieId,
+                seasonId: seasonId,
+                episodeId: String(episode.id),
+                cmd: epCmd
+            })}`;
+            return {
+                id: `${this.sourceId}_episode_${episode.id}`,
+                title: episode.name || `Episode ${epNum}`,
+                episode_num: epNum,
+                season_num: parseInt(seasonId) || 0,
+                // Store the episode's own cmd so resolveStreamUrl passes it directly to create_link
+                direct_url: directUrl,
+                info: episode
+            };
+        });
+    }
+
+    async resolveStreamUrl(cmd: string, catchup?: StalkerCatchupOptions): Promise<string> {
+        console.log('[Stalker] resolveStreamUrl called with:', cmd, 'catchup:', catchup);
+
+        // Ensure we have a valid token before resolving stream URLs
+        await this.ensureToken();
+
+        if (!cmd || typeof cmd !== 'string') {
+            throw new Error('Invalid cmd parameter');
+        }
+
+        let forcedCmd = '';
+        let type: 'vod' | 'itv' = 'vod';
+        let seriesEpisodeNum: string | undefined = undefined;
+
+        // Handle different command formats
+        if (cmd.startsWith('stalker_episode:')) {
+            let config: { movieId: string; seasonId: string; episodeId: string; cmd: string };
+            const jsonStr = cmd.substring('stalker_episode:'.length);
+            try {
+                config = JSON.parse(jsonStr);
+            } catch (e) {
+                // Backwards compatibility for old format: stalker_episode:movie_id:season_id:episode_id:cmd
+                const parts = cmd.split(':');
+                if (parts.length < 5) {
+                    throw new Error('Invalid stalker_episode format');
+                }
+                config = {
+                    movieId: parts[1],
+                    seasonId: parts[2],
+                    episodeId: parts[3],
+                    cmd: parts.slice(4).join(':')
+                };
+            }
+
+            const movieId = config.movieId;
+            let seasonId = config.seasonId;
+            const episodeNum = config.episodeId;
+            let episodeCmd = config.cmd;
+
+            console.log(`[Stalker] Resolving episode: Movie=${movieId}, Season=${seasonId}, EpisodeId=${episodeNum}`);
+
+            // Determine if the episodeId is a sequential episode number (1, 2, 3...) or a
+            // database episode ID (large integer like 931146). This affects how we call create_link:
+            //  - Sequential number: use season cmd + series param (old approach)
+            //  - Database ID: use the episode's own cmd directly (no series param needed)
+            const episodeNumInt = parseInt(episodeNum);
+            const isSequentialEpisodeNum = !isNaN(episodeNumInt) && episodeNumInt < 1000 && episodeNumInt > 0;
+
+            if (isSequentialEpisodeNum) {
+                // Old-style: season cmd + series episode number
+                seriesEpisodeNum = episodeNum;
+            }
+            // If it's a database ID, we use episodeCmd directly without series param
+
+            // If seasonId is a small sequential number (like 1, 2, 3) or not present,
+            // resolve it on-the-fly for backwards compatibility.
+            // Avoid resolving if the ID has colons, underscores or hyphens since those are database IDs.
+            if (seasonId && parseInt(seasonId) < 100 && !seasonId.includes(':') && !seasonId.includes('_') && !seasonId.includes('-')) {
+                console.log(`[Stalker] resolveStreamUrl: Detected season number ${seasonId} instead of database ID. Resolving season ID on-the-fly...`);
+                try {
+                    const seasons = await this.getSeasons(movieId);
+                    const matchedSeason = seasons.find(s => String(s.season_number) === String(seasonId)) || seasons[0];
+                    if (matchedSeason && matchedSeason.episodes.length > 0) {
+                        const ep = matchedSeason.episodes[0];
+                        if (ep.direct_url.startsWith('stalker_episode:')) {
+                            const epJsonStr = ep.direct_url.substring('stalker_episode:'.length);
+                            try {
+                                const epConfig = JSON.parse(epJsonStr);
+                                if (epConfig.seasonId && (parseInt(epConfig.seasonId) >= 100 || epConfig.seasonId.includes(':') || epConfig.seasonId.includes('_') || epConfig.seasonId.includes('-'))) {
+                                    seasonId = epConfig.seasonId;
+                                    episodeCmd = epConfig.cmd;
+                                    console.log(`[Stalker] resolveStreamUrl: Resolved season number ${config.seasonId} to season ID ${seasonId} with command ${episodeCmd}`);
+                                }
+                            } catch (err) {
+                                // Fallback if first ep direct_url is also old format
+                                const epParts = ep.direct_url.split(':');
+                                if (epParts.length >= 5 && epParts[2] && (parseInt(epParts[2]) >= 100 || epParts[2].includes(':') || epParts[2].includes('_') || epParts[2].includes('-'))) {
+                                    seasonId = epParts[2];
+                                    episodeCmd = epParts.slice(4).join(':');
+                                    console.log(`[Stalker] resolveStreamUrl: Resolved season number ${config.seasonId} to season ID ${seasonId} with command ${episodeCmd}`);
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('[Stalker] resolveStreamUrl: Failed to resolve season ID on-the-fly:', e);
+                }
+            }
+
+            // For database episode IDs, we MUST fetch get_ordered_list with the specific episode_id
+            // to get the real cmd before calling create_link. This is because:
+            //  1. The episode list fetch (episode_id=0) may not return the correct per-episode cmd
+            //  2. The fallback /media/file_{episodeId}.mpg uses the episode's DB ID which often
+            //     does NOT match the actual media file ID on the server
+            // This matches the correct flow: get_ordered_list(episode_id=X) → cmd → create_link(cmd)
+            if (!isSequentialEpisodeNum && episodeNum && seasonId) {
+                console.log(`[Stalker] resolveStreamUrl: Fetching real cmd via get_ordered_list for episode_id=${episodeNum} (movie=${movieId}, season=${seasonId})...`);
+                try {
+                    // Try series type first, then vod
+                    let epListResp: any = null;
+                    for (const epType of ['vod', 'series'] as const) {
+                        try {
+                            epListResp = await this.fetchStalker<any>('get_ordered_list', epType, {
+                                movie_id: movieId,
+                                season_id: seasonId,
+                                episode_id: episodeNum,
+                                p: '0',
+                                include_censored: '1',
+                                censored: '1'
+                            });
+                            let epData = epListResp?.data || epListResp;
+                            if (epData?.js?.data) epData = epData.js.data;
+                            if (Array.isArray(epData) && epData.length > 0) {
+                                const matched = epData.find((e: any) => String(e.id) === String(episodeNum)) || epData[0];
+                                if (matched.cmd) {
+                                    episodeCmd = matched.cmd;
+                                    console.log(`[Stalker] resolveStreamUrl: Using real cmd from episode fetch: ${episodeCmd}`);
+                                    break;
+                                }
+                            }
+                        } catch (epErr) {
+                            console.warn(`[Stalker] resolveStreamUrl: get_ordered_list(type=${epType}) for episode_id failed:`, epErr);
+                        }
+                    }
+                } catch (e) {
+                    console.error('[Stalker] resolveStreamUrl: Failed to fetch real episode cmd:', e);
+                    // Fall through and use whatever cmd we have
+                }
+            }
+
+            // Use the episode's cmd directly. For per-episode cmds this is the episode-specific
+            // stream path. For season-level cmds the series param (set above) selects the episode.
+            if (episodeCmd) {
+                forcedCmd = episodeCmd;
+            } else {
+                throw new Error('No cmd available for episode resolution');
+            }
+
+        } else if (cmd.startsWith('stalker_vod:')) {
+            // Standalone VOD
+            const parts = cmd.split(':');
+            const movieId = parts[1];
+            const storedCmd = parts[2];  // cmd from category fetch
+
+            // If we have cmd stored, use it directly (more reliable)
+            if (storedCmd) {
+                console.log(`[Stalker] Using stored cmd for movie_id ${movieId}`);
+                forcedCmd = storedCmd;
+            } else {
+                // Fallback: try get_ordered_list (less reliable on some portals)
+                console.log(`[Stalker] No stored cmd, fetching via get_ordered_list for movie_id ${movieId}`);
+                const listResp = await this.fetchStalker<any>('get_ordered_list', 'vod', {
+                    movie_id: movieId,
+                    p: '1',
+                    include_censored: '1',
+                    censored: '1'
+                });
+                const listData = listResp?.data || listResp?.js?.data;
+                if (Array.isArray(listData) && listData.length > 0) {
+                    // FIXED: Don't blindly use listData[0] - find the item that matches our movie_id
+                    // The response may contain multiple items or cached results
+                    const item = listData.find((i: any) => String(i.id) === String(movieId)) || listData[0];
+                    console.log(`[Stalker] VOD item for movie_id ${movieId}:`, JSON.stringify(item).substring(0, 200));
+                    forcedCmd = item.cmd || `/media/${item.id}.mpg`;
+                } else {
+                    throw new Error('VOD movie not found');
+                }
+            }
+        } else if (cmd.startsWith('stalker_ch:')) {
+            type = 'itv';
+            forcedCmd = cmd.substring('stalker_ch:'.length);
+        } else if (cmd.startsWith('/media/')) {
+            forcedCmd = cmd;
+            type = 'vod';
+        } else {
+            // Default to live ITV stream for direct URLs (e.g. /play/live.php?stream=12345)
+            type = 'itv';
+            forcedCmd = cmd;
+        }
+
+        // If catchup options are provided for a live TV channel:
+        if (catchup && type === 'itv') {
+            // Fast-path for Dino / MAC / Xtream portals that use direct stream URLs (e.g. /play/live.php)
+            if (forcedCmd.includes('/play/') || forcedCmd.startsWith('http://') || forcedCmd.startsWith('https://')) {
+                const startDate = new Date(catchup.startTimeMs);
+                const year = startDate.getUTCFullYear();
+                const month = String(startDate.getUTCMonth() + 1).padStart(2, '0');
+                const day = String(startDate.getUTCDate()).padStart(2, '0');
+                const hour = String(startDate.getUTCHours()).padStart(2, '0');
+                const minute = String(startDate.getUTCMinutes()).padStart(2, '0');
+                const formattedStart = `${year}-${month}-${day}:${hour}-${minute}`;
+                const durationMinutes = catchup.durationMinutes;
+
+                let cleanBase = forcedCmd.replace('/play/live.php', '/play/timeshift.php');
+                cleanBase = cleanBase.replace(/([?&])(start|duration|utc|lutc)=[^&]*/gi, '');
+                cleanBase = cleanBase.replace(/[?&]+$/, '').replace(/&+/g, '&');
+                const sep = cleanBase.includes('?') ? '&' : '?';
+
+                const timeshiftUrl = `${cleanBase}${sep}start=${formattedStart}&duration=${durationMinutes}`;
+                console.log(`[Stalker] Resolved MAC portal timeshift URL directly: ${timeshiftUrl}`);
+                return timeshiftUrl;
+            }
+
+            const startSec = Math.floor(catchup.startTimeMs / 1000);
+            const endSec = startSec + Math.floor(catchup.durationMinutes * 60);
+
+            // Extract numeric stream ID from forcedCmd if present (e.g., from stream=45619 or /ch/45619 or 45619)
+            let streamId: string | null = null;
+            const streamParamMatch = forcedCmd.match(/[?&]stream=(\d+)/i);
+            const chMatch = forcedCmd.match(/\/ch\/(\d+)/i);
+            const numOnlyMatch = forcedCmd.match(/^\d+$/);
+
+            if (streamParamMatch) {
+                streamId = streamParamMatch[1];
+            } else if (chMatch) {
+                streamId = chMatch[1];
+            } else if (numOnlyMatch) {
+                streamId = numOnlyMatch[0];
+            }
+
+            // Build candidate archive commands to handle all Stalker/Ministra server DB schema variants
+            const archiveCmdCandidates: string[] = [];
+
+            // Candidate 1: exact original forcedCmd if present (e.g. ffrt http://localhost/ch/97)
+            if (forcedCmd) {
+                archiveCmdCandidates.push(forcedCmd);
+                if (!forcedCmd.endsWith('_')) {
+                    archiveCmdCandidates.push(`${forcedCmd}_`);
+                }
+            }
+
+            // Candidate 2: standard Stalker/Ministra formats with streamId
+            if (streamId) {
+                archiveCmdCandidates.push(`ffmpeg http://localhost/ch/${streamId}_`);
+                archiveCmdCandidates.push(`ffrt http://localhost/ch/${streamId}`);
+                archiveCmdCandidates.push(`ffrt http://localhost/ch/${streamId}_`);
+                archiveCmdCandidates.push(`http://localhost/ch/${streamId}_`);
+                archiveCmdCandidates.push(`http://localhost/ch/${streamId}`);
+                archiveCmdCandidates.push(`/ch/${streamId}_`);
+                archiveCmdCandidates.push(`/ch/${streamId}`);
+            }
+
+            const uniqueCandidates = [...new Set(archiveCmdCandidates)];
+
+            console.log(`[Stalker] Requesting TV Archive link (streamId=${streamId || 'unknown'}), start=${startSec}, end=${endSec}, candidates=${uniqueCandidates.length}`);
+
+            for (const archiveCmd of uniqueCandidates) {
+                const archiveParams: Record<string, string> = {
+                    cmd: archiveCmd,
+                    type: 'tv_archive',
+                    utc: startSec.toString(),
+                    lutc: endSec.toString(),
+                    start: startSec.toString(),
+                    end: endSec.toString(),
+                };
+                if (streamId) {
+                    archiveParams['ch_id'] = streamId;
+                }
+                if (catchup.programId) {
+                    archiveParams['series'] = catchup.programId;
+                }
+
+                try {
+                    const response = await this.fetchStalker<any>('create_link', 'tv_archive', archiveParams);
+                    let resultUrl = response?.url || response?.cmd || response;
+
+                    if (resultUrl && typeof resultUrl === 'string') {
+                        resultUrl = this.sanitizeStreamUrl(resultUrl);
+
+                        if (
+                            resultUrl &&
+                            !resultUrl.startsWith('?token=') &&
+                            !resultUrl.includes('load.php?token=') &&
+                            !resultUrl.includes('19691231')
+                        ) {
+                            console.log(`[Stalker] Resolved TV Archive stream URL (cmd: ${archiveCmd}): ${resultUrl}`);
+                            return resultUrl;
+                        }
+                    }
+                } catch (err) {
+                    console.warn(`[Stalker] TV Archive create_link failed for cmd (${archiveCmd}):`, err);
+                }
+            }
+        }
+
+        // Helper to request create_link, cleanup and resolve relative URLs
+        const requestLink = async (command: string): Promise<string | undefined> => {
+            try {
+                const params: Record<string, string> = {
+                    cmd: command,
+                    type: type,
+                };
+                if (seriesEpisodeNum) {
+                    params['series'] = seriesEpisodeNum;
+                }
+
+                const response = await this.fetchStalker<any>('create_link', type, params);
+                let resultUrl = response?.url || response?.cmd || response;
+
+                if (resultUrl && typeof resultUrl === 'string') {
+                    resultUrl = this.sanitizeStreamUrl(resultUrl);
+                    return resultUrl;
+                }
+            } catch (err) {
+                console.error('[Stalker] requestLink failed for cmd:', command, err);
+            }
+            return undefined;
+        };
+
+        try {
+            console.log(`[Stalker] Calling create_link. Type=${type}, Cmd=${forcedCmd}`);
+            let resultUrl = await requestLink(forcedCmd);
+
+            // If the resolved URL starts with '?token=' or matches the portal load.php page,
+            // it means the command format was incorrect and the portal fell back to a login token.
+            // We attempt to toggle the cmd format (between /media/file_id.mpg and /media/id.mpg) and retry.
+            if (!resultUrl || resultUrl.startsWith('?token=') || resultUrl.includes('load.php?token=')) {
+                console.log(`[Stalker] resolveStreamUrl: Initial command ${forcedCmd} returned invalid token link: ${resultUrl}. Attempting fallback format...`);
+                
+                // Extract the numerical ID from forcedCmd
+                const idMatch = forcedCmd.match(/(\d+)/);
+                if (idMatch) {
+                    const entityId = idMatch[1];
+                    let alternativeCmd = '';
+                    if (forcedCmd.includes('/media/file_')) {
+                        alternativeCmd = `/media/${entityId}.mpg`;
+                    } else if (forcedCmd.includes('/media/')) {
+                        alternativeCmd = `/media/file_${entityId}.mpg`;
+                    }
+
+                    if (alternativeCmd && alternativeCmd !== forcedCmd) {
+                        console.log(`[Stalker] resolveStreamUrl: Retrying create_link with alternative cmd: ${alternativeCmd}`);
+                        const retryUrl = await requestLink(alternativeCmd);
+                        if (retryUrl && !retryUrl.startsWith('?token=') && !retryUrl.includes('load.php?token=')) {
+                            resultUrl = retryUrl;
+                            console.log(`[Stalker] resolveStreamUrl: Fallback command succeeded! Stream URL: ${resultUrl}`);
+                        }
+                    }
+                }
+            }
+
+            if (!resultUrl) {
+                throw new Error(`create_link returned no URL for cmd ${forcedCmd}`);
+            }
+
+            console.log(`[Stalker] Stream URL: ${resultUrl}`);
+            return resultUrl;
+        } catch (e) {
+            console.error('[Stalker] create_link failed:', e);
+            throw e;
+        }
+    }
+
+    private sanitizeStreamUrl(url: string): string {
+        try {
+            // Remove ffmpeg prefixes
+            let cleanUrl = url.replace(/^(ffmpeg|ffrt)\s*/i, '').trim();
+
+            const baseUrlObj = new URL(this.config.baseUrl);
+
+            // Fix http://:/ or https://:/ or http://:8080/ (missing hostname from Stalker storage)
+            if (cleanUrl.match(/^https?:\/\/:/i)) {
+                cleanUrl = cleanUrl.replace(/^https?:\/\/:(\d+)?/i, `${baseUrlObj.protocol}//${baseUrlObj.host}`);
+            }
+
+            // If it's a relative path, prepend base URL
+            if (cleanUrl.startsWith('/')) {
+                cleanUrl = `${baseUrlObj.protocol}//${baseUrlObj.host}${cleanUrl}`;
+            }
+
+            // Fix localhost/127.0.0.1
+            if (cleanUrl.startsWith('http')) {
+                const urlObj = new URL(cleanUrl);
+                if (urlObj.hostname === 'localhost' || urlObj.hostname === '127.0.0.1') {
+                    urlObj.hostname = baseUrlObj.hostname;
+                    urlObj.port = baseUrlObj.port;
+                    console.log(`[Stalker] Rewrote localhost URL to: ${urlObj.toString()}`);
+                    cleanUrl = urlObj.toString();
+                }
+            }
+
+            return cleanUrl;
+        } catch (e) {
+            console.warn('[Stalker] URL sanitization failed for:', url, e);
+            return url;
+        }
+    }
+
+    async testConnection(): Promise<{ success: boolean; error?: string }> {
+        try {
+            await this.handshake();
+            // Working player calls get_profile immediately after handshake to activate session
+            await this.getProfile();
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
+    }
+
+    /**
+     * Get EPG data for all channels
+     */
+    async getEpg(periodHours: number = 72, pastHours: number = 24): Promise<Map<string, any[]>> {
+        await this.ensureToken();
+        try {
+            // The Stalker `period` parameter covers only FUTURE hours from now.
+            // To also retrieve past programs (needed for catch-up display), we attempt
+            // to request with explicit `from`/`to` unix timestamps covering:
+            //   from = now - pastHours  →  to = now + futureHours
+            // Many Stalker portals honour `from`/`to`; others fall back to `period`.
+            const nowSec = Math.floor(Date.now() / 1000);
+            const futureHours = Math.max(periodHours, 48);
+            const fromSec = nowSec - pastHours * 3600;
+            const toSec = nowSec + futureHours * 3600;
+
+            // Try with from/to first, fall back to period-only
+            let response: any;
+            try {
+                response = await this.fetchStalker<any>('get_epg_info', 'itv', {
+                    period: futureHours.toString(),
+                    from: fromSec.toString(),
+                    to: toSec.toString(),
+                });
+            } catch (_e) {
+                response = await this.fetchStalker<any>('get_epg_info', 'itv', {
+                    period: futureHours.toString(),
+                });
+            }
+
+            const epgData = response?.data || response;
+            const epgMap = new Map<string, any[]>();
+
+            if (!epgData || typeof epgData !== 'object') {
+                console.warn('[Stalker] get_epg_info returned invalid data');
+                return epgMap;
+            }
+
+            for (const [chId, programs] of Object.entries(epgData)) {
+                if (Array.isArray(programs)) {
+                    epgMap.set(`${this.sourceId}_${chId}`, programs);
+                }
+            }
+
+            console.log(`[Stalker] Retrieved EPG for ${epgMap.size} channels (window: -${pastHours}h to +${futureHours}h)`);
+            return epgMap;
+        } catch (err) {
+            console.error('[Stalker] Failed to fetch EPG:', err);
+            return new Map();
+        }
+    }
+
+    /**
+     * Get short EPG for a specific channel
+     */
+    async getShortEpg(channelId: string, size: number = 10, archiveDurationHours: number = 24): Promise<any[]> {
+        await this.ensureToken();
+        // Request a larger window so the list includes recently-aired programmes.
+        // Some Stalker portals also accept `from` as a unix timestamp; include it
+        // as a hint for portals that support it (ignored by those that don't).
+        const fromSec = Math.floor(Date.now() / 1000) - archiveDurationHours * 3600;
+        const response = await this.fetchStalker<any>('get_short_epg', 'itv', {
+            ch_id: channelId,
+            size: Math.max(size, 20).toString(),
+            from: fromSec.toString(),
+        });
+
+        return this.safeJsonList<any>(response);
+    }
+
+    /**
+     * Get account information including expiry date
+     */
+    async getAccountInfo(): Promise<{ mac: string; expiry?: string }> {
+        await this.ensureToken();
+        try {
+            const response = await this.fetchStalker<any>('get_main_info', 'account_info');
+
+            const mac = response?.mac || this.config.mac;
+            const expiry = response?.phone;
+
+            console.log(`[Stalker] Account info: MAC=${mac}, Expiry=${expiry || 'N/A'}`);
+
+            return { mac, expiry };
+        } catch (err) {
+            console.error('[Stalker] Failed to fetch account info:', err);
+            return { mac: this.config.mac };
+        }
+    }
+
+    // Methods expected by sync.ts
+    async getCategoryItems(categoryId: string, type: 'vod' | 'series', onProgress?: StalkerPageProgress): Promise<Channel[]> {
+        if (type === 'vod') {
+            return this.getVodStreams(categoryId, onProgress);
+        } else {
+            return this.getSeriesStreams(categoryId, onProgress);
+        }
+    }
+
+    async getVods(): Promise<{ categories: Category[]; streams: Channel[] }> {
+        const categories = await this.getVodCategories();
+        const streams = await this.getVodStreams();
+        return { categories, streams };
+    }
+
+    async getSeries(): Promise<{ categories: Category[]; streams: Channel[] }> {
+        const categories = await this.getSeriesCategories();
+        const streams = await this.getSeriesStreams();
+        return { categories, streams };
+    }
+
+    async getSeriesInfo(seriesId: string): Promise<Season[]> {
+        // seriesId can be:
+        // 1. Raw Stalker ID (e.g., "12345" or "12345:12345") - passed from syncSeriesEpisodes
+        // 2. Prefixed ID (e.g., "{sourceId}_series_12345") - legacy format
+        // 3. direct_url format (e.g., "stalker_series:12345") - from stored series
+        // getSeasons now returns seasons with episodes already populated (like Python)
+        return this.getSeasons(seriesId);
+    }
+}
+
+interface StalkerGenre {
+    id: string;
+    title: string;
+    censored?: string | number;
+}
+
+interface StalkerChannel {
+    id: string;
+    name: string;
+    number: string;
+    tv_genre_id?: string;
+    genre_id?: string;
+    logo: string;
+    url?: string;
+    cmd?: string;
+    xmltv_id: string;
+    censored?: string | number;
+    lock?: number;
+}

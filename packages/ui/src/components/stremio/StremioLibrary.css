@@ -1,0 +1,199 @@
+.stremio-library {
+  padding: 32px 24px;
+  min-height: 100%;
+}
+
+.stremio-library-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.stremio-library-title {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary, white);
+}
+
+.stremio-library-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stremio-library-search {
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  outline: none;
+  width: 200px;
+  transition: all 0.15s;
+}
+
+.stremio-library-search:focus {
+  border-color: var(--accent-primary, rgba(0, 212, 255, 0.5));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 0 10px var(--accent-glow, rgba(0, 212, 255, 0.05));
+}
+
+.stremio-library-select {
+  background: var(--surface-color, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--surface-border, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary, white);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.stremio-library-select:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--accent-primary, rgba(255, 255, 255, 0.2));
+}
+
+.stremio-library-select option {
+  /* Use --bg-secondary, not --bg-primary: on gradient (solid-*) and custom
+     gradient themes --bg-primary is a linear-gradient(), which native
+     <option> elements can't render — the browser falls back to a white
+     background while --text-primary stays white (invisible text). */
+  background: var(--bg-secondary, #14141e);
+  color: var(--text-primary, white);
+}
+
+.stremio-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(var(--strem-poster-width, 150px) * 0.933), 1fr));
+  gap: 20px;
+}
+
+.stremio-library-empty {
+  text-align: center;
+  color: var(--text-muted, rgba(255, 255, 255, 0.4));
+  padding: 80px 0;
+  font-size: 1rem;
+}
+
+.stremio-library-refreshing {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-muted, rgba(255, 255, 255, 0.5));
+  margin-left: 8px;
+}
+
+.stremio-library-poster-wrap {
+  position: relative;
+}
+
+.stremio-library-new-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: var(--status-new, #e74c3c);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  line-height: 1;
+}
+
+/* Tabs & Title group */
+.stremio-library-title-group {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.stremio-library-tabs {
+  display: flex;
+  background: var(--bg-tertiary, #1c1c24);
+  padding: 4px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stremio-library-tab {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary, #9ca3af);
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.stremio-library-tab:hover {
+  color: var(--text-primary, #ffffff);
+}
+
+.stremio-library-tab.active {
+  background: var(--accent-primary, #7b61ff);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(123, 97, 255, 0.3);
+}
+
+/* History Card Progress Bar and Badges */
+.stremio-library-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.5);
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  overflow: hidden;
+}
+
+.stremio-library-progress-fill {
+  height: 100%;
+  background: var(--accent-primary, #7b61ff);
+  transition: width 0.3s ease;
+}
+
+.stremio-library-ep-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--text-primary, #ffffff);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.stremio-library-ep-badge.next {
+  background: var(--accent-primary, #7b61ff);
+  border-color: var(--accent-primary, #7b61ff);
+  box-shadow: 0 2px 6px rgba(123, 97, 255, 0.3);
+}
+
+.stremio-library-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-secondary, #9ca3af);
+  margin-top: 2px;
+}
+
+.stremio-library-card-sub.next {
+  color: var(--accent-primary, #7b61ff);
+  font-weight: 600;
+}

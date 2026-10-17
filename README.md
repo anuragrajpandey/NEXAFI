@@ -1,1 +1,304 @@
-# NEXAFI
+# ynoTV
+
+[![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)](https://tauri.app)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript)](https://www.typescriptlang.org)
+[![License](https://img.shields.io/badge/License-AGPL%20v3-green.svg)](./LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Windows-blue)](./README.md)
+![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/tbeezy/ynotv/total)
+[![Chat Server](https://img.shields.io/badge/chat-discord-7289da.svg)](https://discord.gg/e5eGa5QETB)
+
+A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://tauri.app) and [mpv](https://mpv.io). 
+
+[Documentation](https://tbeezy.github.io/ynotvdoc)
+
+[![Watch the video](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png)](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png)
+
+[Old Video Demonstration](https://streamable.com/jxjq9n)
+
+---
+
+## Screenshots:
+
+| EPG with preview | VOD |
+| :-------------------------------------: | :--------------------------------------: |
+| ![EPG with preview](https://i.ibb.co/207znsrw/ynotv-go-Ckngt-Ezr.png) | ![VOD](https://i.imgur.com/eR2b3jb.jpeg) |
+| Playlist Editor | EPG Editor |
+| ![Playlist Editor](https://i.imgur.com/oMc7ecE.png) | ![EPG Editor](https://i.imgur.com/rv2ewdz.png) |
+| Watchlist Option with autoswitch | Strem View |
+| ![Watchlist Option with autoswitch](https://i.imgur.com/7PzZPz0.png) | ![Strem View](https://i.imgur.com/2woHM6m.jpeg) |
+| Sports View | Themes |
+| ![Sports View](https://i.imgur.com/Hr6wtiY.png) | ![Themes](https://i.imgur.com/WDjMMSh.png) |
+| Multiview Menu | PiP View |
+| ![Multiview Menu](https://i.imgur.com/KOXyWBs.jpeg) | ![PiP View](https://i.imgur.com/LxweTiN.jpeg) |
+| Multiview 2x2 | DVR Page |
+| ![Multiview 2x2](https://i.imgur.com/V2v5DCy.jpeg) | ![DVR Page](https://i.imgur.com/Pwojil9.png) |
+
+
+---
+## Features
+
+- **M3U, Xtream Codes & Stalker Support** - multiple EPG sources supported
+- **Stremio Integration & Addons support** - Integrated optional stremio login to sync watchlist/addons or add addons directly
+- **Nuvio Integration** - Integrated login for 2 way sync with watchlist, addons, plugins, collections, settings
+- **Playlist Editor** - Create Custom playlist from your sources, move categories/channels from one into another
+- **Grid-style EPG** - with an integrated preview window
+- **Catchup & Cache Time Shift** - instant replays on supported channels
+- **Automatic Stream Fallback** - detects and switches away from stalled or dead streams
+- **Smart Auto-Group for Failover** - Auto-cluster duplicate channels into failover groups, with Always Play Primary
+- **Controllers & Phone Remote** - Full gamepad support with spatial navigation, remappable buttons, and chord combos. Use your phone as a remote with QR pairing (guide browser, sports, and multiview tabs)
+- **Channel Stream Probe & IPTV Checker** - Bulk stream health checks (alive/dead/geoblocked/DRM), auto-fill resolution/FPS/bitrate badges, one-click disable of dead channels, and sort groups by quality
+- **Local Library** - Add local movie/series folders auto-matched with TMDB metadata, with watch progress and backup inclusion
+- **Sports Team Channel Linking** - Link teams to channels for one-tap game watching, with auto-linking and backup streams with auto-swap
+- **Simkl, Discord & OpenSubtitles Integration** - Scrobble to Simkl, show what you're watching on Discord, and download subtitles from OpenSubtitles
+- **24 UI Languages** - Full localization support
+- **Transparent EPG Guide, Category Folders & Logo Editor** - Translucent overlay guide, folder grouping of categories, and bulk logo customization
+- **Sports Tab** - real-time scores and detailed game stats with instant search to find channel
+- **Cast to TV** - Cast to any supported TV devices on your local network
+- **Export Playlist to M3U** - Export any modifications you've done into an .m3u
+- **Trakt integration** - Scrobble directly to your Trakt account
+- **Widget System** - Display live sports score in overlay
+- **VOD Support** - rich metadata via TMDB and RPDB with saved progress
+- **Subtitle Integration** - Subsource support for VODs
+- **Popout Player & External player** - play streams in a seperate MPV window or your choice in an external player
+- **Backup DNS/URLs** - automatically swaps when the current source fails
+- **Favorites & Custom Groups** - pull from any source
+- **Channel Management** - rename, hide, and sort categories and channels freely
+- **EPG Editor** - change tvg-id, logos, or auto-match to a different entry
+- **Embedded MPV Playback** - with support for custom parameters
+- **Multiview** - resizable PiP, also supporting up to four simultaneous streams in a 2x2 grid
+- **Channel & EPG Search** - instant results with advanced filtering options
+- **Watchlist & Reminders** - auto-swaps to a channel when a program goes live
+- **Built-in DVR** - record any stream or schedule for later
+- **TV Calendar** - powered by TVMaze for auto-setting reminders on upcoming shows
+- **Reprogrammable Hotkeys** - Fast navigation with ease of access
+- **40+ Built-in Themes** - something for every preference
+
+---
+
+<details>
+<summary>Building from Source</summary>
+
+## Building from Source
+
+### Prerequisites
+
+- **Node.js** 20.x or higher
+- **pnpm** 9.x or higher — install with `npm install -g pnpm` (the project specifies `9.1.0` via the `packageManager` field; if you have [corepack](https://nodejs.org/api/corepack.html) enabled, the correct version is used automatically)
+- **Rust** (latest stable) — required for the Tauri backend. Install via [rustup](https://rustup.rs/)
+- **Git**
+
+**Windows additional requirements:**
+- [Microsoft Edge WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) — required for Tauri's rendering engine
+- Visual Studio 2022 with C++ build tools
+- Windows 10 SDK
+
+### Instructions
+
+**1. Clone the repository**
+
+```bash
+git clone https://github.com/tbeezy/ynotv.git
+cd ynotv
+```
+
+**2. Install dependencies**
+
+```bash
+pnpm install
+```
+
+**3. Download mpv sidecar**
+
+FFmpeg is downloaded automatically during the build step, but mpv (and yt-dlp) must be downloaded manually first:
+
+```bash
+bash scripts/download-mpv-tauri.sh
+```
+
+*(Optional)* If you also want to pre-download FFmpeg manually:
+```bash
+cd packages/app
+node scripts/download-ffmpeg.js
+cd ../..
+```
+
+**4. Run in development mode**
+
+```bash
+pnpm dev
+```
+
+This starts both the Vite UI dev server and the Tauri app concurrently.
+
+**5. Build for production**
+
+```bash
+pnpm tauri build
+```
+
+Build output is located at:
+
+```
+packages/app/src-tauri/target/release/bundle/
+```
+
+> **Recovery builds**: if a user's database is too large and the app fails to
+> start, there is a one-off database recovery screen (export → rebuild →
+> import) that ships disabled by default. See [docs/recovery-build.md](docs/recovery-build.md)
+> for how to enable it.
+
+</details>
+
+---
+
+<details>
+<summary>Data & File Locations</summary>
+
+## Data & File Locations
+
+### Configuration
+
+```
+%APPDATA%\com.ynotv.app\
+├── settings.json          # Sources, shortcuts, and preferences
+└── .windows-state.json    # Window size and position
+```
+
+### Database (SQLite)
+
+```
+%LOCALAPPDATA%\com.ynotv.app\app.db
+```
+
+The database stores channels, categories, EPG programs (7-day window), VOD movies and series, watchlist entries, reminders, DVR schedules and recordings, channel metadata, and source sync timestamps.
+
+### Logs
+
+Debug logging can be enabled in Settings > Debug. Log output is written to:
+
+```
+%APPDATA%\com.ynotv.app\logs\app.log
+```
+
+### DVR Recordings
+
+The recording directory is configurable in Settings > DVR. The default location is:
+
+```
+%USERPROFILE%\Videos\ynoTV Recordings\
+```
+
+</details>
+
+---
+
+<details>
+<summary>Keyboard Shortcuts</summary>
+
+## Keyboard Shortcuts
+
+All shortcuts are fully customizable in Settings > Shortcuts.
+
+### Playback
+
+| Action | Default |
+|---|---|
+| Play / Pause | `Space` |
+| Seek Forward | `Right Arrow` |
+| Seek Backward | `Left Arrow` |
+| Mute / Unmute | `M` |
+| Select Subtitle (Modal) | `J` |
+| Select Audio Track (Modal) | `A` |
+| Toggle Fullscreen | `F` |
+| Replay Last Stream | `Q` |
+
+### Navigation
+
+| Action | Default |
+|---|---|
+| Channel Up | `Up Arrow` |
+| Channel Down | `Down Arrow` |
+
+### Interface
+
+| Action | Default |
+|---|---|
+| Toggle Live TV (Guide + Categories) | `L` |
+| Toggle Guide | `G` |
+| Toggle Categories | `C` |
+| Toggle DVR | `R` |
+| Toggle Sports | `U` |
+| Toggle TV Calendar | `T` |
+| Toggle Settings | `,` |
+| Show / Hide Stats | `I` |
+| Focus Search | `S` |
+| Toggle EPG View Layout | `E` |
+| Close / Back | `Esc` |
+
+### Layout
+
+| Action | Default |
+|---|---|
+| Layout: Main View | `1` |
+| Layout: Picture in Picture | `2` |
+| Layout: Big + Bottom Bar | `3` |
+| Layout: 2×2 Grid | `4` |
+
+</details>
+
+---
+
+## Star History
+
+<a href="https://www.star-history.com/?repos=tbeezy%2Fynotv&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&theme=dark&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
+   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=tbeezy/ynotv&type=date&legend=top-left&sealed_token=siqZZiJV0IOChgy89MenOrL0CGYjtWbao3DnPfPuenhCb0wM4gc_7KCWwKl3vcO8WSWDlaob3kPhT44fsP8bXaZKDpDW2jg_-ybrSpv6YutO2Gi-dDCXlrrORZ1uUBUcNMczU6GRBYCt4aifgdJhY2OKPeXJ8Ix3inzPj2rPZc04lUQyZE9amauRWsPx" />
+ </picture>
+</a>
+
+---
+
+## Disclaimer
+
+Built with the help of AI.
+
+ynoTV is a media player only. It does not provide, host, distribute, or facilitate access to any streaming services, broadcast content, channel lists, or IPTV subscriptions of any kind.
+
+All content, streams, and playlists are sourced, configured, and managed solely by the end user. The developers have no knowledge of, control over, or responsibility for any third-party content accessed through the application.
+
+Users are solely responsible for ensuring that any content they access complies with the laws and regulations applicable in their jurisdiction. The developers do not condone or support the use of this application to access unlicensed or unauthorized content.
+
+Metadata displayed within the application is sourced from publicly available third-party databases including TVMaze and TMDB. ynoTV does not claim ownership of this metadata.
+
+---
+
+## Credits
+
+ynoTV builds on the following open source projects and services:
+
+
+- [sbtlTV](https://github.com/thesubtleties/sbtlTV) — original foundation
+- [Tauri](https://tauri.app) — desktop application framework
+- [mpv](https://mpv.io) — video playback engine
+- [FFmpeg](https://ffmpeg.org) — recording and thumbnail generation
+- [TVMaze](https://www.tvmaze.com) — TV schedule and show metadata
+- [TMDB](https://www.themoviedb.org) — movie and series metadata
+- [Trakt.tv](https://app.trakt.tv/) - Scrobble support & catalogs
+- [Stremio](https://www.stremio.com/) — for building an open addon ecosystem that makes third-party integration possible
+- [Nuvio](https://nuvio.tv/) — for creating a fantastic open source media platform and making their codebase publicly available
+- [Harbor](https://github.com/harborstremio/harbor) — Stremio integration and various features
+- [Simkl](https://simkl.com) — scrobbling support for movies and series
+- [OpenSubtitles](https://www.opensubtitles.com) — subtitle downloads in the player
+- [SubSource](https://www.subsource.net) — subtitle search for movies and series
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — YouTube trailer playback
+- [RatingPosterDB](https://ratingposterdb.com) — rating badges on VOD posters
+
+
+---
+
+## License
+
+[GNU Affero General Public License v3.0](./LICENSE)
