@@ -26,7 +26,8 @@ def target_size(path: Path):
     name = path.stem
     match = re.search(r"(\d+)x(\d+)", name, re.IGNORECASE)
     if match:
-        return int(match.group(1)), int(match.group(2))
+        scale = 2 if re.search(r"@2x$", name, re.IGNORECASE) else 1
+        return int(match.group(1)) * scale, int(match.group(2)) * scale
     match = re.search(r"Square(\d+)x(\d+)", name, re.IGNORECASE)
     if match:
         return int(match.group(1)), int(match.group(2))
