@@ -1,4 +1,4 @@
-import EliteStocksTVLogo from '../assets/EliteStocksTV.svg';
+import NEXAFILogo from '../../../app/src-tauri/icons/NEXAFI.png';
 
 interface LogoProps {
   className?: string;
@@ -10,10 +10,10 @@ export function Logo({ className, width, height }: LogoProps) {
   return (
     <img
       className={className}
-      src={EliteStocksTVLogo}
+      src={NEXAFILogo}
       width={width}
       height={height}
-      alt="EliteStocks TV"
+      alt="NEXAFI TV"
       draggable={false}
       style={{ objectFit: 'contain' }}
     />
