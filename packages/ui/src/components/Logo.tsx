@@ -1,4 +1,4 @@
-import NEXAFILogo from '../../../app/src-tauri/icons/NEXAFI.png';
+import NEXAFILogo from '../assets/NEXAFI.png';
 
 interface LogoProps {
   className?: string;
