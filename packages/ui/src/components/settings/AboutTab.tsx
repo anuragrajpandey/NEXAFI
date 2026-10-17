@@ -47,21 +47,21 @@ export function AboutTab() {
           <div className="about-links" style={{ marginBottom: '24px', display: 'flex', gap: '16px' }}>
             <button
               className="sync-btn"
-              onClick={() => openLink('https://www.elitestocks.in')}
+              onClick={() => openLink('https://github.com/anuragrajpandey/NEXAFI')}
               style={{ maxWidth: '140px' }}
             >
               EliteStocks
             </button>
             <button
               className="sync-btn"
-              onClick={() => openLink('https://github.com/anuragrajpandey/EliteStocksTV-Player')}
+              onClick={() => openLink('https://github.com/anuragrajpandey/NEXAFI/releases')}
               style={{ maxWidth: '140px' }}
             >
               {i18n.t('settings:about.documentation')}
             </button>
             <button
               className="sync-btn"
-              onClick={() => openLink('https://t.me/EliteStocks_TV')}
+              onClick={() => openLink('https://github.com/anuragrajpandey/NEXAFI/issues')}
               style={{ maxWidth: '140px' }}
             >
               Telegram
