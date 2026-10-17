@@ -1,4 +1,4 @@
-# ynoTV
+# NEXAFI TV
 
 [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)](https://tauri.app)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react)](https://react.dev)
@@ -8,7 +8,7 @@
 ![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/tbeezy/ynotv/total)
 [![Chat Server](https://img.shields.io/badge/chat-discord-7289da.svg)](https://discord.gg/e5eGa5QETB)
 
-A feature-rich, open source IPTV player for Windows built on [Tauri v2](https://tauri.app) and [mpv](https://mpv.io). 
+NEXAFI TV is a feature-rich IPTV player for Windows built on [Tauri v2](https://tauri.app) and [mpv](https://mpv.io). 
 
 [Documentation](https://tbeezy.github.io/ynotvdoc)
 
